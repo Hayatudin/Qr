@@ -1,0 +1,98 @@
+{
+  "header": {
+    "title": "DAAWWANNAA HOOTELA"
+  },
+  "nav": {
+    "home": "Fuullee",
+    "favorites": "Jaallattoota",
+    "feedback": "Yaada",
+    "settings": "Qindeeffama"
+  },
+  "hero": {
+    "title": "Muuxannoo Addaa Yaadaa Olu Argadhaa"
+  },
+  "search": {
+    "placeholder": "Tajaajila Barbaadi..."
+  },
+  "categories": {
+    "all": "Hundaa",
+    "food": "Nyaata",
+    "drink": "Dhugaatii",
+    "room": "Tajaajila Kutaa"
+  },
+  "product": {
+    "price": "Birrii {{price}}"
+  },
+  "favorites": {
+    "title": "Jaallattoota Koo",
+    "empty_title": "Jaallattoonni Hinjiran",
+    "empty_description": "Tajaajila jaallattu yoo dabaltu asitti siif mul'ata.",
+    "login_prompt": "Jaallattoota kee arguuf maaloo seeni."
+  },
+  "feedback": {
+    "title": "Yaada Kee Nuuf Qoodi",
+    "description": "Tajaajila keenya akka fooyyessinuuf nu gargaari",
+    "service_label": "Tajaajila/Gita",
+    "service_placeholder": "Tajaajila yookiin gita filadhu...",
+    "general_feedback": "Yaada Waliigalaa",
+    "rating_label": "Sadarkaa Waliigalaa",
+    "comment_label": "Yaada Kee",
+    "comment_placeholder": "Muuxannoo kee nuuf qoodi...",
+    "submit_button": "Yaada Ergi"
+  },
+  "settings": {
+    "title": "Qindeeffamoota",
+    "account_heading": "Akkaawuntii",
+    "quick_settings_heading": "Qindeeffama Ariifataa",
+    "signed_in_as": "Akka ittiin seente",
+    "admin_badge": "Bulchaa",
+    "sign_out_button": "Bahi",
+    "sign_in_button": "Seeni / Galmeessi",
+    "dark_mode": "Halluu Dukkanaa'aa",
+    "dark_mode_description": "Gara halluu dukkanaa'aatti jijjiiri",
+    "admin_panel": "Paaneelii Bulchaa",
+    "dialog": {
+      "login_title": "Seeni",
+      "login_description": "Akkaawuntii kee seenuuf odeeffannoo kee galchi.",
+      "register_title": "Akkaawuntii Uumi",
+      "register_description": "Akkaawuntii haaraa uumuuf iddoo duwwaa guuti.",
+      "username_placeholder": "Maqaa Itti Fayyadamaa",
+      "email_placeholder": "Imeelii",
+      "password_placeholder": "Jecha Darbii",
+      "register_button": "Galmeessi",
+      "login_switch": "Akkaawuntii hin qabduu? Galmeessi",
+      "register_switch": "Dursee akkaawuntii qabdaa? Seeni"
+    }
+  },
+  "admin": {
+    "title": "Paaneelii Bulchaa",
+    "services_tab": "Bulchiinsa Tajaajilaa",
+    "feedback_tab": "Yaada Fayyadamtootaa",
+    "manage_services": "Tajaajiloota Bulchi",
+    "add_service": "Tajaajila Dabali",
+    "current_services": "Tajaajiloota Ammaa",
+    "edit_service": "Tajaajila Fooyyessi",
+    "user_feedback": "Yaada Fayyadamtootaa",
+    "reviews": "Yaadota {{count}}",
+    "no_feedback_title": "Yaadni Hinjiruu",
+    "no_feedback_description": "Yaadni fayyadamaa yoo kenname asitti mul'ata.",
+    "feedback_on": "Yaada kanarratti: {{category}}",
+    "feedback_by": "Kan kenne: {{user}}",
+    "anonymous": "Kan Maqaan Hin Beekamne",
+    "form_add_title": "Tajaajila Haaraa Dabali",
+    "form_edit_title": "Tajaajila Fooyyessi",
+    "form_name": "Maqaa Tajaajilaa",
+    "form_price": "Gatii",
+    "form_description": "Ibsa",
+    "form_image": "Suuraa",
+    "form_save_button": "Jijjiirama Olkaa'i",
+    "delete_dialog_title": "Mirkanoo keessanii?",
+    "delete_dialog_description": "Goonfannoon kun hin deebi'u. Tajaajila \"{{name}}\" jedhamu bara baraan ni haqxa.",
+    "cancel": "Haqi",
+    "delete": "Balleessi"
+  },
+  "messages": {
+    "loading": "Facaasaa jira...",
+    "no_products": "Oomishni barbaadde hin argamne."
+  }
+}

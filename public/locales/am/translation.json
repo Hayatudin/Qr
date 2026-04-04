@@ -1,0 +1,98 @@
+{
+  "header": {
+    "title": "የሆቴል ጉብኝት"
+  },
+  "nav": {
+    "home": "መነሻ",
+    "favorites": "ምርጫዎች",
+    "feedback": "አስተያየት",
+    "settings": "ማስተካከያዎች"
+  },
+  "hero": {
+    "title": "ከምናብ በላይ የሆነ የቅንጦት ልምድ"
+  },
+  "search": {
+    "placeholder": "አገልግሎቶችን ይፈልጉ..."
+  },
+  "categories": {
+    "all": "ሁሉም",
+    "food": "ምግብ",
+    "drink": "መጠጦች",
+    "room": "የክፍል አገልግሎት"
+  },
+  "product": {
+    "price": "{{price}} ብር"
+  },
+  "favorites": {
+    "title": "የእኔ ምርጫዎች",
+    "empty_title": "እስካሁን ምንም ምርጫ የለም",
+    "empty_description": "የሚወዷቸው አገልግሎቶች አንዴ ካከሉ በኋላ እዚህ ይታያሉ።",
+    "login_prompt": "ምርጫዎችዎን ለማየት እባክዎ ይግቡ።"
+  },
+  "feedback": {
+    "title": "አስተያየትዎን ያካፍሉ",
+    "description": "አገልግሎታችንን እንድናሻሽል እርዱን",
+    "service_label": "አገልግሎት/ምድብ",
+    "service_placeholder": "አገልግሎት ወይም ምድብ ይምረጡ...",
+    "general_feedback": "አጠቃላይ አስተያየት",
+    "rating_label": "አጠቃላይ ደረጃ",
+    "comment_label": "የእርስዎ አስተያየት",
+    "comment_placeholder": "ልምድዎን ያካፍሉን...",
+    "submit_button": "አስተያየት ያስገቡ"
+  },
+  "settings": {
+    "title": "ማስተካከያዎች",
+    "account_heading": "መለያ",
+    "quick_settings_heading": "ፈጣን ማስተካከያዎች",
+    "signed_in_as": "የገቡት እንደ",
+    "admin_badge": "አስተዳዳሪ",
+    "sign_out_button": "ውጣ",
+    "sign_in_button": "ይግቡ / ይመዝገቡ",
+    "dark_mode": "ጨለማ ገጽታ",
+    "dark_mode_description": "ወደ ጨለማ ገጽታ ቀይር",
+    "admin_panel": "የአስተዳዳሪ ፓነል",
+    "dialog": {
+      "login_title": "ይግቡ",
+      "login_description": "ወደ መለያዎ ለመግባት ምስክርነቶችዎን ያስገቡ።",
+      "register_title": "መለያ ይፍጠሩ",
+      "register_description": "አዲስ መለያ ለመፍጠር ከታች ያሉትን ዝርዝሮች ይሙሉ።",
+      "username_placeholder": "የተጠቃሚ ስም",
+      "email_placeholder": "ኢሜይል",
+      "password_placeholder": "የይለፍ ቃል",
+      "register_button": "ይመዝገቡ",
+      "login_switch": "መለያ የለዎትም? ይመዝገቡ",
+      "register_switch": "አስቀድመው መለያ አለዎት? ይግቡ"
+    }
+  },
+  "admin": {
+    "title": "የአስተዳዳሪ ፓነል",
+    "services_tab": "የአገልግሎት አስተዳደር",
+    "feedback_tab": "የተጠቃሚ አስተያየት",
+    "manage_services": "አገልግሎቶችን ያስተዳድሩ",
+    "add_service": "አገልግሎት ጨምር",
+    "current_services": "የአሁኑ አገልግሎቶች",
+    "edit_service": "አገልግሎት አስተካክል",
+    "user_feedback": "የተጠቃሚ አስተያየት",
+    "reviews": "{{count}} አስተያየቶች",
+    "no_feedback_title": "እስካሁን ምንም አስተያየት የለም",
+    "no_feedback_description": "የተጠቃሚ አስተያየት አንዴ ከገባ እዚህ ይታያል።",
+    "feedback_on": "አስተያየት በ: {{category}}",
+    "feedback_by": "በ: {{user}}",
+    "anonymous": "ስም-አልባ",
+    "form_add_title": "አዲስ አገልግሎት ጨምር",
+    "form_edit_title": "አገልግሎት አስተካክል",
+    "form_name": "የአገልግሎት ስም",
+    "form_price": "ዋጋ",
+    "form_description": "תיאור",
+    "form_image": "ምስል",
+    "form_save_button": "ለውጦችን አስቀምጥ",
+    "delete_dialog_title": "እርግጠኛ ነዎት?",
+    "delete_dialog_description": "ይህ ድርጊት ሊቀለበስ አይችልም። ይህ \"{{name}}\" አገልግሎትን በቋሚነት ይሰርዛል።",
+    "cancel": "ይቅር",
+    "delete": "ሰርዝ"
+  },
+  "messages": {
+    "loading": "በመጫን ላይ...",
+    "no_products": "ከፍለጋዎ ጋር የሚዛመድ ምርት አልተገኘም።"
+  }
+}

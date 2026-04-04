@@ -1,0 +1,98 @@
+{
+  "header": {
+    "title": "HOTEL TOUR"
+  },
+  "nav": {
+    "home": "Home",
+    "favorites": "Favorites",
+    "feedback": "Feedback",
+    "settings": "Settings"
+  },
+  "hero": {
+    "title": "Experience Luxury Beyond Imagination"
+  },
+  "search": {
+    "placeholder": "Search Services..."
+  },
+  "categories": {
+    "all": "All",
+    "food": "Food",
+    "drink": "Drinks",
+    "room": "Room Service"
+  },
+  "product": {
+    "price": "{{price}} birr"
+  },
+  "favorites": {
+    "title": "My Favorites",
+    "empty_title": "No Favorites Yet",
+    "empty_description": "Your favorite services will appear here once you add them.",
+    "login_prompt": "Please log in to see your favorites."
+  },
+  "feedback": {
+    "title": "Share Your Feedback",
+    "description": "Help us improve our services",
+    "service_label": "Service/Category",
+    "service_placeholder": "Select a service or category...",
+    "general_feedback": "General Feedback",
+    "rating_label": "Overall Rating",
+    "comment_label": "Your Feedback",
+    "comment_placeholder": "Share your experience with us...",
+    "submit_button": "Submit Feedback"
+  },
+  "settings": {
+    "title": "Settings",
+    "account_heading": "Account",
+    "quick_settings_heading": "Quick Settings",
+    "signed_in_as": "Signed in as",
+    "admin_badge": "Administrator",
+    "sign_out_button": "Sign Out",
+    "sign_in_button": "Sign In / Register",
+    "dark_mode": "Dark Mode",
+    "dark_mode_description": "Switch to dark theme",
+    "admin_panel": "Admin Panel",
+    "dialog": {
+      "login_title": "Sign In",
+      "login_description": "Enter your credentials to access your account.",
+      "register_title": "Create Account",
+      "register_description": "Fill in the details below to create a new account.",
+      "username_placeholder": "Username",
+      "email_placeholder": "Email",
+      "password_placeholder": "Password",
+      "register_button": "Register",
+      "login_switch": "Don't have an account? Register",
+      "register_switch": "Already have an account? Sign In"
+    }
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "services_tab": "Services Management",
+    "feedback_tab": "User Feedback",
+    "manage_services": "Manage Services",
+    "add_service": "Add Service",
+    "current_services": "Current Services",
+    "edit_service": "Edit Service",
+    "user_feedback": "User Feedback",
+    "reviews": "{{count}} Reviews",
+    "no_feedback_title": "No Feedback Yet",
+    "no_feedback_description": "User feedback will appear here once submitted.",
+    "feedback_on": "Feedback on: {{category}}",
+    "feedback_by": "By: {{user}}",
+    "anonymous": "Anonymous",
+    "form_add_title": "Add New Service",
+    "form_edit_title": "Edit Service",
+    "form_name": "Service Name",
+    "form_price": "Price",
+    "form_description": "Description",
+    "form_image": "Image",
+    "form_save_button": "Save Changes",
+    "delete_dialog_title": "Are you sure?",
+    "delete_dialog_description": "This action cannot be undone. This will permanently delete the \"{{name}}\" service.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "messages": {
+    "loading": "Loading...",
+    "no_products": "No products found matching your criteria."
+  }
+}

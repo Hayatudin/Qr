@@ -1,0 +1,81 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+
+interface CategoryTabsProps {
+  onCategoryChange?: (category: string) => void;
+}
+
+export const CategoryTabs: React.FC<CategoryTabsProps> = ({ onCategoryChange }) => {
+  const { t, i18n } = useTranslation();
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const navRef = useRef<HTMLElement>(null);
+
+  const categories = [
+    { id: 'all', label: t('categories.all') },
+    { id: 'food', label: t('categories.food') },
+    { id: 'drink', label: t('categories.drink') },
+    { id: 'room', label: t('categories.room') }
+  ];
+
+  useEffect(() => {
+    // Need a slight delay to allow font rendering and flex layout to settle length calculation
+    const updateIndicator = () => {
+      if (navRef.current) {
+        const activeElement = navRef.current.querySelector('[aria-selected="true"]') as HTMLElement;
+        if (activeElement) {
+          setIndicatorStyle({
+            left: activeElement.offsetLeft,
+            width: activeElement.offsetWidth,
+          });
+        }
+      }
+    };
+    
+    updateIndicator();
+    const timeout = setTimeout(updateIndicator, 100);
+    return () => clearTimeout(timeout);
+  }, [activeCategory, i18n.language]);
+
+  const handleCategoryClick = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    onCategoryChange?.(categoryId);
+  };
+
+  return (
+    <div className="flex items-end justify-between w-full mt-3 mb-4 border-b border-border/40 pb-1">
+      <h2 className="text-[26px] font-bold text-foreground leading-none tracking-tight">Menu</h2>
+      
+      <nav ref={navRef} className="relative flex items-center gap-[14px]" role="tablist">
+        {categories.map((category) => {
+          const isActive = activeCategory === category.id;
+          return (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category.id)}
+              className={`relative pb-1 text-[13px] font-medium transition-colors duration-200 z-10 ${
+                isActive
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground/80'
+              }`}
+              role="tab"
+              aria-selected={isActive}
+            >
+              {category.label}
+            </button>
+          );
+        })}
+        
+        {/* Sliding Indicator */}
+        <div
+          className="absolute bottom-0 h-[2px] rounded-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
+          style={{ 
+            left: `${indicatorStyle.left}px`, 
+            width: `${indicatorStyle.width}px`,
+            backgroundColor: '#daba70', // Match golden font color
+          }}
+        />
+      </nav>
+    </div>
+  );
+};
