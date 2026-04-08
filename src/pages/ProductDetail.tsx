@@ -2,21 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/contexts/UserContext';
-import { Heart, ChevronLeft, Check } from 'lucide-react';
+import { Heart, ChevronLeft, Check, Plus, Minus, Info, Bed, Sofa, Utensils, Zap, Users, Maximize } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useRoomMode } from '@/contexts/RoomContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
+
+const TranslatedItem = ({ text }: { text: string }) => {
+  const { i18n } = useTranslation();
+  const [translated, setTranslated] = useState(text);
+
+  useEffect(() => {
+    if (i18n.language === 'en') {
+      setTranslated(text);
+      return;
+    }
+    
+    import('@/utils/translator').then(({ translateText }) => {
+        translateText(text, i18n.language).then(setTranslated);
+    });
+  }, [text, i18n.language]);
+
+  return <span className="truncate">{translated}</span>;
+}
 
 export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useUser();
   const { t, i18n } = useTranslation();
+  const { formatPrice } = useCurrency();
+  const { isRoomMode, addToCart } = useRoomMode();
 
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [translatedName, setTranslatedName] = useState("");
+  const [translatedDesc, setTranslatedDesc] = useState("");
 
   useEffect(() => {
     const fetchProductDetails = async () => {
+      if (!id) return;
       setIsLoading(true);
       try {
         const [servicesRes, favoritesRes] = await Promise.all([
@@ -26,24 +54,26 @@ export const ProductDetail = () => {
 
         if (!servicesRes.ok) throw new Error('Failed to fetch services');
         const servicesData = await servicesRes.json();
-        const foundProduct = servicesData.find((s: any) => String(s.id) === id);
+        const foundProduct = Array.isArray(servicesData) ? servicesData.find((s: any) => String(s.id) === String(id)) : servicesData;
 
-        if (!foundProduct) {
-          throw new Error("Product not found");
-        }
+        if (!foundProduct) throw new Error("Product not found");
 
         let isFav = false;
         if (favoritesRes && favoritesRes.ok) {
           const favoritesData = await favoritesRes.json();
-          if (!favoritesData.error) {
-            isFav = favoritesData.some((fav: any) => String(fav.service_id) === id);
+          if (Array.isArray(favoritesData)) {
+            isFav = favoritesData.some((fav: any) => String(fav.service_id) === String(id));
           }
         }
 
         setProduct(foundProduct);
         setIsFavorited(isFav);
+        if (foundProduct.ingredients) {
+            try { setIngredients(JSON.parse(foundProduct.ingredients)); } catch (e) { setIngredients([]); }
+        }
 
       } catch (err: any) {
+        console.error("ProductDetail Error:", err);
         toast.error(err.message || "Failed to load product details.");
       } finally {
         setIsLoading(false);
@@ -81,20 +111,47 @@ export const ProductDetail = () => {
   };
 
   const getTranslatedName = () => {
-    if (!product) return '';
+    if (translatedName) return translatedName;
     const lang = i18n.language;
-    if (lang === 'am' && product.name_am) return product.name_am;
-    if (lang === 'om' && product.name_om) return product.name_om;
-    return product.name_en;
+    if (lang === 'am' && product?.name_am) return product.name_am;
+    if (lang === 'om' && product?.name_om) return product.name_om;
+    if (lang === 'sid' && product?.name_sid) return product.name_sid; 
+    return product?.name_en || '';
   };
 
   const getTranslatedDescription = () => {
-    if (!product) return '';
+    if (translatedDesc) return translatedDesc;
     const lang = i18n.language;
-    if (lang === 'am' && product.description_am) return product.description_am;
-    if (lang === 'om' && product.description_om) return product.description_om;
-    return product.description_en;
+    if (lang === 'am' && product?.description_am) return product.description_am;
+    if (lang === 'om' && product?.description_om) return product.description_om;
+    if (lang === 'sid' && product?.description_sid) return product.description_sid;
+    return product?.description_en || '';
   };
+
+  // Auto-translate name and description
+  useEffect(() => {
+    const currentLang = i18n.language;
+    if (!product || currentLang === 'en') {
+      setTranslatedName("");
+      setTranslatedDesc("");
+      return;
+    }
+
+    const nameInLang = getTranslatedName();
+    const descInLang = getTranslatedDescription();
+
+    import('@/utils/translator').then(({ translateAndPersist }) => {
+      // If the specific column is empty or still English, translate it
+      if (!nameInLang || nameInLang === product.name_en) {
+        translateAndPersist(Number(product.id), product.name_en, currentLang, 'name')
+          .then(setTranslatedName);
+      }
+      if (!descInLang || descInLang === product.description_en) {
+        translateAndPersist(Number(product.id), product.description_en, currentLang, 'description')
+          .then(setTranslatedDesc);
+      }
+    });
+  }, [i18n.language, product]);
 
   if (isLoading) {
     return (
@@ -108,7 +165,7 @@ export const ProductDetail = () => {
     return (
       <div className="bg-background flex max-w-[480px] w-full min-h-screen mx-auto flex-col items-center justify-center px-5 page-transition">
         <p className="text-xl font-semibold mb-4 text-foreground">Product not found</p>
-        <button onClick={() => navigate(-1)} className="text-golden font-medium underline">Go Back</button>
+        <button onClick={() => navigate(-1)} className="text-zinc-500 dark:text-zinc-400 font-medium underline">Go Back</button>
       </div>
     );
   }
@@ -116,12 +173,6 @@ export const ProductDetail = () => {
   const imageUrl = product.image_url
     ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:8000/${product.image_url}`)
     : '/placeholder.svg';
-
-  // Static mock data to perfectly match the UI request
-  const ingredients = [
-    "Boneless chicken Meats", "Fresh broccoli", "teyrikayi sauce mode",
-    "sugar", "garlic", "sesame oil", "salt"
-  ];
 
   const addOns = [
     { name: "Extra Protein 1 scoop", price: "350 ETB" },
@@ -133,35 +184,46 @@ export const ProductDetail = () => {
     <div className="bg-background text-foreground flex max-w-[480px] w-full flex-col overflow-x-hidden mx-auto min-h-screen pb-6 page-transition relative">
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-6 left-5 z-20 w-10 h-10 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-black"
+        className="fixed top-6 left-5 z-50 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 shadow-lg active:scale-95 transition-transform"
         aria-label="Go back"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
 
-      {/* Hero Section with yellow background and asymmetrical curve */}
-      <div className="relative w-full h-[400px] bg-[#EBB41A] rounded-b-[20%] overflow-hidden flex items-center justify-center shadow-lg"
-        style={{ borderBottomLeftRadius: '30% 15%', borderBottomRightRadius: '30% 15%', paddingBottom: '40px' }}
-      >
+      {/* Hero Section with full section image and perfect asymmetrical curve */}
+      <div className="relative w-full h-[420px] overflow-hidden flex items-center justify-center shadow-md">
         <img
           src={imageUrl}
           alt={getTranslatedName()}
-          className="w-64 h-64 object-cover rounded-full drop-shadow-2xl z-10"
+          className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
         />
-        {/* Decorative inner curve using a solid element inside or just rely on the main crop for matching design */}
+        <div className="absolute inset-0 bg-black/10 z-[5]"></div>
+        
+        <div className="absolute inset-x-0 bottom-[-1px] z-10 w-full">
+            <svg 
+              viewBox="0 0 500 150" 
+              preserveAspectRatio="none" 
+              className="w-full h-[100px] text-background fill-current"
+            >
+              <path d="M-1.41,83.38 C141.93,178.12 344.52,-69.56 501.97,105.10 L500.00,150.00 L0.00,150.00 Z" />
+            </svg>
+        </div>
       </div>
 
-      <div className="flex-1 w-full px-6 -mt-10 relative z-10">
-        <div className="flex justify-end w-full drop-shadow-sm mb-2">
+      <div className="flex-1 w-full px-6 -mt-12 relative z-20">
+        <div className="flex justify-between items-center w-full mb-3">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full border border-border/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-sm">
+            {product.type === 'room' ? <Bed className="w-3 h-3 text-zinc-500 dark:text-zinc-400" /> : <Utensils className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />}
+            {product.type === 'room' ? 'Room Service' : product.type}
+          </div>
           <button
             onClick={handleFavoriteClick}
-            className="w-12 h-12 bg-background rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] text-golden"
+            className="w-11 h-11 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.1)] text-zinc-900 dark:text-white hover:scale-110 active:scale-95 transition-transform"
             aria-label="Toggle favorite"
           >
             <Heart
-              className={`w-6 h-6 transition-colors ${isFavorited ? 'fill-golden text-golden' : 'text-golden'
-                }`}
+              className={`w-5.5 h-5.5 transition-colors ${isFavorited ? 'fill-current text-zinc-900 dark:text-white' : 'text-current'}`}
               strokeWidth={2.5}
             />
           </button>
@@ -169,55 +231,144 @@ export const ProductDetail = () => {
 
         <div className="flex justify-between items-start mb-2">
           <h1 className="text-2xl font-bold text-[#1E2022] dark:text-white w-[60%] leading-tight">{getTranslatedName()}</h1>
-          <span className="text-xl font-bold text-golden">{product.price} birr</span>
+          <span className="text-xl font-extrabold text-zinc-900 dark:text-white">{formatPrice(Number(product.price))}</span>
         </div>
 
-        <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-6 lowercase">
-          {getTranslatedDescription() || "this is your food just enjoy it it has chicken leg and its arm filled with bold spicy dulet so just give it a try and i'm sure your'e not gonna disappointed you will like it."}
+        <p className="text-muted-foreground text-sm font-medium leading-relaxed mb-6">
+          {getTranslatedDescription() || "Discover the delightful flavors of this carefully prepared dish, featuring high-quality ingredients and a balance of spices that ensure a satisfying culinary experience."}
         </p>
 
-        {/* Ingredients */}
-        <div className="mb-6">
-          <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">Ingredients:</h2>
-          <ul className="space-y-2">
-            {ingredients.map((item, index) => (
-              <li key={index} className="flex items-center text-sm font-medium text-muted-foreground">
-                <Check className="w-4 h-4 mr-2 text-black dark:text-white shrink-0" strokeWidth={3} />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Ingredients / Room Features */}
+        {ingredients.length > 0 && (
+          <div className="mb-6 animate-in slide-in-from-bottom-2 duration-500">
+            <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">
+              {product.type === 'room' ? 'Room Features:' : 'Ingredients:'}
+            </h2>
+            <ul className={product.type === 'room' ? "grid grid-cols-2 gap-y-2.5 gap-x-4" : "space-y-2"}>
+              {ingredients.map((item, index) => (
+                <li key={index} className="flex items-center text-sm font-medium text-muted-foreground group">
+                  <div className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mr-2.5 group-hover:scale-110 transition-transform">
+                    {product.type === 'room' ? (
+                      <Zap className="w-3 h-3 text-zinc-900 dark:text-white" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 text-zinc-900 dark:text-white" strokeWidth={3} />
+                    )}
+                  </div>
+                  <TranslatedItem text={item} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-        {/* Macros */}
-        <div className="mb-6">
-          <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">Macros:</h2>
-          <p className="text-sm font-bold text-[#1E2022] dark:text-white">
-            420 kcal <span className="font-medium text-muted-foreground">| p: 34g | F: 40g | C: 58g</span>
-          </p>
-        </div>
+        {/* Macros - Only for non-room service */}
+        {product.type !== 'room' && (product.macro_kcal || product.macro_protein || product.macro_fat || product.macro_carbs) && (
+          <div className="mb-6 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-muted/30 p-3.5 rounded-2xl border border-border/40 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-sm font-extrabold text-zinc-900 dark:text-white leading-none">{product.macro_kcal || 0}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Kcal</span>
+                </div>
+                
+                <div className="w-px h-5 bg-border/50" />
 
-        {/* Add-Ons */}
-        <div className="mb-8">
-          <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">Add-Ons</h2>
-          <div className="space-y-2.5">
-            {addOns.map((addon, index) => (
-              <div key={index} className="flex items-center justify-between text-sm font-medium">
-                <div className="flex items-center w-full">
-                  <Check className="w-4 h-4 mr-2 text-black dark:text-white shrink-0" strokeWidth={3} />
-                  <span className="text-muted-foreground whitespace-nowrap">{addon.name}</span>
-                  <span className="flex-1 border-b border-dashed border-muted-foreground/30 mx-2 relative top-[2px]"></span>
-                  <span className="text-golden font-bold ms-auto">{addon.price}</span>
+                <div className="flex-1 flex items-center justify-between gap-1">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">P</span>
+                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_protein || 0}g</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">F</span>
+                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_fat || 0}g</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">C</span>
+                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_carbs || 0}g</span>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Room Specific UI: Amenities / Quick Info */}
+        {product.type === 'room' && (
+          <div className="mb-8 grid grid-cols-3 gap-3 animate-in fade-in zoom-in duration-700">
+            <div className="bg-card/60 rounded-2xl p-3 border border-border/50 text-center">
+              <Bed className="w-5 h-5 text-zinc-500 dark:text-zinc-400 mx-auto mb-1" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                {product.beds || 1} {product.beds === 1 ? 'Bed' : 'Beds'}
+              </p>
+            </div>
+            <div className="bg-card/60 rounded-2xl p-3 border border-border/50 text-center">
+              <Users className="w-5 h-5 text-zinc-500 dark:text-zinc-400 mx-auto mb-1" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                {product.max_guests || 2} Guests
+              </p>
+            </div>
+            <div className="bg-card/60 rounded-2xl p-3 border border-border/50 text-center">
+              <Sofa className="w-5 h-5 text-zinc-500 dark:text-zinc-400 mx-auto mb-1" />
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Luxury</p>
+            </div>
+          </div>
+        )}
+
+        {/* Add-Ons - Only for non-room service */}
+        {product.type !== 'room' && (
+          <div className="mb-8">
+            <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">Add-Ons</h2>
+            <div className="space-y-2.5">
+              {addOns.map((addon, index) => (
+                <div key={index} className="flex items-center justify-between text-sm font-medium">
+                  <div className="flex items-center w-full group">
+                    <div className="w-5 h-5 rounded-md border border-border/60 flex items-center justify-center mr-2 group-hover:bg-accent transition-colors">
+                      <Plus className="w-3 h-3 text-muted-foreground" strokeWidth={3} />
+                    </div>
+                    <span className="text-muted-foreground whitespace-nowrap">{addon.name}</span>
+                    <span className="flex-1 border-b border-dashed border-muted-foreground/30 mx-2 relative top-[2px]"></span>
+                    <span className="text-zinc-900 dark:text-white font-extrabold ms-auto">{addon.price}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quantity and Action Area (Combined) */}
+        {isRoomMode && (
+          <div className="flex flex-col gap-4 mb-6 pt-2">
+            <div className="flex items-center justify-between bg-muted/30 p-2 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center shadow-sm active:scale-95 transition-transform"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-lg font-bold w-4 text-center">{quantity}</span>
+                <button 
+                  onClick={() => setQuantity(q => q + 1)}
+                  className="w-10 h-10 rounded-xl bg-background border border-border/50 flex items-center justify-center shadow-sm active:scale-95 transition-transform"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <Button 
+                onClick={() => addToCart({ ...product, quantity })}
+                className="flex-1 ml-4 bg-primary text-primary-foreground h-12 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]"
+              >
+                {product.type === 'room' ? 'Add To Service' : 'Add To Cart'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={() => navigate('/feedback')}
-          className="w-full bg-black text-white dark:bg-white dark:text-black font-medium text-sm py-4 rounded-[1.5rem] mt-2 mb-6 hover:bg-black/90 dark:hover:bg-white/90 transition-colors"
+          className="w-full bg-zinc-900 text-white dark:bg-white dark:text-black font-bold text-sm py-[18px] rounded-2xl mt-2 mb-6 shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
         >
+          <Info className="w-4 h-4" />
           Give us feedback
         </button>
       </div>

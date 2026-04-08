@@ -8,11 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUser } from '@/contexts/UserContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 
 const Profile = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, setUser } = useUser();
+  const { currency } = useCurrency();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
@@ -234,29 +236,43 @@ const Profile = () => {
           <div className="h-px bg-border mx-4" />
 
           {/* Language */}
-          <button className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors">
+          <button 
+            onClick={() => navigate('/settings/language')}
+            className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors"
+          >
             <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
               <Globe className="h-4 w-4 text-foreground" />
             </div>
             <span className="flex-1 text-sm font-medium text-foreground text-left">Language</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-bold text-muted-foreground uppercase">{i18n.language}</span>
+               <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </button>
 
           <div className="h-px bg-border mx-4" />
 
           {/* Currency */}
-          <button className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors">
+          <button 
+            onClick={() => navigate('/settings/currency')}
+            className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors"
+          >
             <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
               <DollarSign className="h-4 w-4 text-foreground" />
             </div>
             <span className="flex-1 text-sm font-medium text-foreground text-left">Currency</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-bold text-muted-foreground uppercase">{currency}</span>
+               <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
           </button>
         </div>
 
-        {/* About Us */}
         <div className="bg-card rounded-2xl border border-border/50 overflow-hidden mb-5">
-          <button className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors">
+          <button 
+            onClick={() => navigate('/settings/about')}
+            className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors"
+          >
             <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
               <Info className="h-4 w-4 text-foreground" />
             </div>
@@ -267,17 +283,23 @@ const Profile = () => {
 
         {/* Admin Panel (only for admins) */}
         {user?.role === 'admin' && (
-          <div className="bg-card rounded-2xl border border-border/50 overflow-hidden mb-5">
-            <button
-              className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors"
+          <div className="mb-5 scale-in">
+            <h2 className="text-[10px] font-bold text-muted-foreground mb-2 uppercase tracking-widest px-1">Administrative</h2>
+            <div 
+              className="group flex items-center justify-between bg-card p-3.5 rounded-2xl border border-golden/20 cursor-pointer hover:bg-golden/5 transition-all active:scale-[0.98] shadow-sm"
               onClick={handleAdminPanelClick}
             >
-              <div className="w-8 h-8 rounded-lg bg-golden/20 flex items-center justify-center">
-                <SettingsIcon className="h-4 w-4 text-golden" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-golden/10 flex items-center justify-center text-golden group-hover:scale-110 transition-transform">
+                  <SettingsIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Admin Panel</h3>
+                  <p className="text-[10px] text-muted-foreground">Manage products & orders</p>
+                </div>
               </div>
-              <span className="flex-1 text-sm font-medium text-foreground text-left">Admin Panel</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-1 transition-transform" />
+            </div>
           </div>
         )}
       </main>

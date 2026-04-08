@@ -7,6 +7,10 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { FilterDrawer, FilterState, initialFilterState } from '@/components/FilterDrawer';
 import { useUser } from '@/contexts/UserContext';
 
+import { RoomBadge } from '@/components/RoomBadge';
+import { FloatingCart } from '@/components/FloatingCart';
+import { FloatingCallWaiter } from '@/components/FloatingCallWaiter';
+
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -67,6 +71,7 @@ const Index = () => {
   return (
     <div className="bg-background text-foreground flex max-w-[480px] w-full flex-col overflow-x-hidden mx-auto min-h-screen pb-28">
       <div className="relative w-full">
+        <RoomBadge />
         <HeroSection />
       </div>
 
@@ -84,6 +89,8 @@ const Index = () => {
         />
       </main>
 
+      <FloatingCart />
+      <FloatingCallWaiter />
       <BottomNavigation />
 
       <FilterDrawer 

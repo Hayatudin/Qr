@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
+import { RoomProvider } from "./contexts/RoomContext";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
@@ -11,26 +12,38 @@ import Favorites from "./pages/Favorites";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import ProductDetail from "./pages/ProductDetail";
+import AboutUs from "./pages/AboutUs";
+
+import { CurrencyProvider } from "./contexts/CurrencyContext";
+import CurrencySettings from "./pages/CurrencySettings";
+import LanguageSettings from "./pages/LanguageSettings";
 
 const App = () => (
   <ThemeProvider>
     <UserProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
+      <CurrencyProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <RoomProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner duration={2000} />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings/currency" element={<CurrencySettings />} />
+                <Route path="/settings/language" element={<LanguageSettings />} />
+                <Route path="/settings/about" element={<AboutUs />} />
+                <Route path="/feedback" element={<Feedback />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/product/:id" element={<ProductDetail />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TooltipProvider>
+          </RoomProvider>
         </BrowserRouter>
-      </TooltipProvider>
+      </CurrencyProvider>
     </UserProvider>
   </ThemeProvider>
 );

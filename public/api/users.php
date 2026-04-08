@@ -32,7 +32,7 @@ if ($action === 'register') {
         // --- FIX: This is the correct INSERT statement for the users table ---
         $stmt = $pdo->prepare('INSERT INTO users (email, username, password, role) VALUES (?, ?, ?, ?)');
         $stmt->execute([$email, $username, $hash, $role]);
-        $userId = $pdo->lastInsertId();
+        $userId = $pdo->lastInsertId('users_id_seq');
 
         // Return the new user object on successful registration
         echo json_encode([
@@ -48,7 +48,7 @@ if ($action === 'register') {
     } catch (PDOException $e) {
         http_response_code(409);
         // --- FIX: Correct error handling messages ---
-        if ($e->errorInfo[1] == 1062) { // Catches duplicate email/username
+        if ($e->getCode() == 23505) { // Catches duplicate email/username (Postgres unique violation)
             echo json_encode(['error' => 'Email or username already exists.']);
         } else {
             // Generic database error for other issues

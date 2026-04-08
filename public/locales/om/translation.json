@@ -21,7 +21,7 @@
     "room": "Tajaajila Kutaa"
   },
   "product": {
-    "price": "Birrii {{price}}"
+    "price": "{{price}}"
   },
   "favorites": {
     "title": "Jaallattoota Koo",

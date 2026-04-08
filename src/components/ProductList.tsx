@@ -41,7 +41,9 @@ export const ProductList: React.FC<ProductListProps> = ({
     if (!matchesSearch) return false;
 
     const matchesCategory =
-      activeCategory === "all" || product.type === activeCategory;
+      activeCategory === "all"
+        ? product.type !== "room"
+        : product.type === activeCategory;
     if (!matchesCategory) return false;
 
     if (filters) {

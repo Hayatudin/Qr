@@ -194,6 +194,29 @@ const Settings = () => {
             )}
           </div>
         </div>
+        
+        {user?.role === 'admin' && (
+          <div className="mb-8 scale-in">
+            <h2 className="text-lg font-medium text-foreground mb-4 uppercase tracking-tight text-xs opacity-70">Administrative</h2>
+            <div 
+              className="group flex items-center justify-between bg-card p-4 rounded-xl border border-golden/30 cursor-pointer hover:bg-golden/5 transition-all active:scale-[0.98] shadow-sm"
+              onClick={handleAdminPanelClick}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-golden/20 flex items-center justify-center text-golden group-hover:scale-110 transition-transform">
+                  <SettingsIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">{t('settings.admin_panel')}</h3>
+                  <p className="text-xs text-muted-foreground">Manage products, orders, and feedback</p>
+                </div>
+              </div>
+              <div className="bg-muted w-8 h-8 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-8">
           <h2 className="text-lg font-medium text-foreground mb-4">{t('settings.quick_settings_heading')}</h2>
@@ -215,12 +238,18 @@ const Settings = () => {
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
 
-            <div className="flex items-center justify-between bg-card p-4 rounded-lg border cursor-pointer hover:bg-accent transition-colors">
+            <div 
+                className="flex items-center justify-between bg-card p-4 rounded-lg border cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => navigate('/settings/currency')}
+            >
               <div className="flex items-center gap-3">
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
                 <h3 className="font-medium text-foreground">Currency</h3>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted-foreground uppercase">{currency}</span>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
             </div>
 
             <div className="flex items-center justify-between bg-card p-4 rounded-lg border cursor-pointer hover:bg-accent transition-colors">
@@ -230,19 +259,6 @@ const Settings = () => {
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-
-            {user?.role === 'admin' && (
-              <div 
-                className="flex items-center justify-between bg-card p-4 rounded-lg border cursor-pointer hover:bg-accent transition-colors"
-                onClick={handleAdminPanelClick}
-              >
-                <div className="flex items-center gap-3">
-                  <SettingsIcon className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="font-medium text-foreground">{t('settings.admin_panel')}</h3>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            )}
         </div>
       </main>
       

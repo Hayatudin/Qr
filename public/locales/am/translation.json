@@ -21,7 +21,7 @@
     "room": "የክፍል አገልግሎት"
   },
   "product": {
-    "price": "{{price}} ብር"
+    "price": "{{price}}"
   },
   "favorites": {
     "title": "የእኔ ምርጫዎች",

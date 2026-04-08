@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MessageSquare, Plus, Star, Trash2, Edit, X } from "lucide-react";
+import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing } from "lucide-react";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -19,14 +21,17 @@ import { useTranslation } from "react-i18next";
 interface Service {
   id: number;
   name_en: string;
-  name_am: string;
-  name_om: string;
   description_en: string;
-  description_am: string;
-  description_om: string;
   price: string;
   type: string;
   image_url: string;
+  ingredients: string; // JSON string
+  macro_kcal: number | null;
+  macro_protein: number | null;
+  macro_fat: number | null;
+  macro_carbs: number | null;
+  beds: number | null;
+  max_guests: number | null;
 }
 
 interface Feedback {
@@ -39,8 +44,27 @@ interface Feedback {
   service_name: string | null;
 }
 
+import { subscribeToNotifications } from "@/lib/firebase";
+
+interface RoomOrder {
+  id: number;
+  room_number: string;
+  total_price: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+  items: any[];
+}
+
+interface WaiterCall {
+  id: number;
+  room_number: string;
+  status: 'pending' | 'completed';
+  created_at: string;
+}
+
 const AdminPanel = () => {
   const { user } = useUser();
+  const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -54,11 +78,21 @@ const AdminPanel = () => {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState("");
 
+  const [orders, setOrders] = useState<RoomOrder[]>([]);
+  const [calls, setCalls] = useState<WaiterCall[]>([]);
+  const [roomLoading, setRoomLoading] = useState(false);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   
-  const initialFormData = { name_en: "", description_en: "", name_am: "", description_am: "", name_om: "", description_om: "", price: "", type: "food" };
+  const initialFormData = { 
+    name_en: "", description_en: "", 
+    price: "", type: "food",
+    macro_kcal: "", macro_protein: "", macro_fat: "", macro_carbs: "",
+    beds: "1", max_guests: "2"
+  };
   const [formData, setFormData] = useState(initialFormData);
+  const [ingredients, setIngredients] = useState<string[]>([""]);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -98,19 +132,98 @@ const AdminPanel = () => {
     setFeedbackLoading(false);
   };
 
+  const fetchRoomData = async () => {
+    setRoomLoading(true);
+    try {
+      const [ordersRes, callsRes] = await Promise.all([
+        fetch("http://localhost:8000/api/orders.php"),
+        fetch("http://localhost:8000/api/calls.php")
+      ]);
+      
+      if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (callsRes.ok) setCalls(await callsRes.json());
+    } catch (e) {
+      console.error("Failed to fetch room data", e);
+    }
+    setRoomLoading(false);
+  };
+
+  const updateOrderStatus = async (id: number, status: string) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/orders.php", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status })
+      });
+      if (res.ok) {
+        toast.success(`Order status updated to ${status}`);
+        fetchRoomData();
+      }
+    } catch (e) {
+      toast.error("Failed to update order status");
+    }
+  };
+
+  const updateCallStatus = async (id: number, status: string) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/calls.php", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status })
+      });
+      if (res.ok) {
+        toast.success(`Call marked as ${status}`);
+        fetchRoomData();
+      }
+    } catch (e) {
+      toast.error("Failed to update call status");
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'admin') {
       if (activeTab === 'services') {
         fetchServices();
       } else if (activeTab === 'feedback') {
         fetchFeedback();
+      } else if (activeTab === 'orders' || activeTab === 'calls') {
+        fetchRoomData();
       }
     }
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    const unsubscribe = subscribeToNotifications((notification) => {
+      if (notification.type === 'order') {
+        toast.info(`New Order! Room ${notification.roomNumber} - ${notification.totalPrice} ETB`, {
+          description: "A new room service order has been placed.",
+          action: {
+            label: "View",
+            onClick: () => setActiveTab("orders")
+          }
+        });
+        if (activeTab === 'orders') fetchRoomData();
+      } else if (notification.type === 'call') {
+        toast.warning(`Waiter Call! Room ${notification.roomNumber}`, {
+          description: "A guest is requesting assistance.",
+          action: {
+            label: "View",
+            onClick: () => setActiveTab("calls")
+          }
+        });
+        if (activeTab === 'calls') fetchRoomData();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user, activeTab]);
+
   const openAddForm = () => {
     setEditingService(null);
     setFormData(initialFormData);
+    setIngredients([""]);
     setImageFile(null);
     setIsFormOpen(true);
   };
@@ -120,13 +233,23 @@ const AdminPanel = () => {
     setFormData({
       name_en: service.name_en,
       description_en: service.description_en,
-      name_am: service.name_am,
-      description_am: service.description_am,
-      name_om: service.name_om,
-      description_om: service.description_om,
       price: service.price,
       type: service.type,
+      macro_kcal: service.macro_kcal?.toString() || "",
+      macro_protein: service.macro_protein?.toString() || "",
+      macro_fat: service.macro_fat?.toString() || "",
+      macro_carbs: service.macro_carbs?.toString() || "",
+      beds: service.beds?.toString() || "1",
+      max_guests: service.max_guests?.toString() || "2",
     });
+    
+    try {
+      const parsedIngs = JSON.parse(service.ingredients || "[]");
+      setIngredients(parsedIngs.length > 0 ? parsedIngs : [""]);
+    } catch (e) {
+      setIngredients([""]);
+    }
+    
     setImageFile(null);
     setIsFormOpen(true);
   };
@@ -141,12 +264,32 @@ const AdminPanel = () => {
     }
   };
 
+  const handleIngredientChange = (index: number, value: string) => {
+    const newIngs = [...ingredients];
+    newIngs[index] = value;
+    setIngredients(newIngs);
+  };
+
+  const addIngredientField = () => {
+    setIngredients([...ingredients, ""]);
+  };
+
+  const removeIngredientField = (index: number) => {
+    if (ingredients.length > 1) {
+      setIngredients(ingredients.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
         data.append(key, value);
     });
+
+    // Send ingredients as JSON string
+    const filteredIngs = ingredients.filter(i => i.trim() !== "");
+    data.append('ingredients', JSON.stringify(filteredIngs));
     
     if (imageFile) {
       data.append('image', imageFile);
@@ -222,7 +365,7 @@ const AdminPanel = () => {
                   <div className="flex-1">
                     <p className="font-bold">{service.name_en}</p>
                     <p className="text-sm text-muted-foreground capitalize">{service.type}</p>
-                    <p className="text-sm font-medium text-golden">{t('product.price', {price: service.price})}</p>
+                    <p className="text-sm font-bold text-foreground">{formatPrice(Number(service.price))}</p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -253,53 +396,153 @@ const AdminPanel = () => {
       
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-                <DialogTitle>{formTitle}</DialogTitle>
-                <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Close</span>
-                </DialogClose>
+            <DialogHeader className="sticky top-0 z-50 bg-background/90 backdrop-blur-md pb-4 pt-1 border-b mb-6 border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center justify-between w-full px-1">
+                    <DialogTitle className="text-xl font-bold tracking-tight">{formTitle}</DialogTitle>
+                    <DialogClose className="p-2 rounded-full hover:bg-muted transition-all active:scale-90 border border-transparent hover:border-border shadow-sm">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close</span>
+                    </DialogClose>
+                </div>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                {/* English Fields */}
+                {/* Category Selection - Moved to Top */}
                 <div className="space-y-2">
-                    <Label>English</Label>
-                    <Input placeholder="Service Name (EN)" value={formData.name_en} onChange={(e) => handleInputChange("name_en", e.target.value)} required />
-                    <Textarea placeholder="Description (EN)" value={formData.description_en} onChange={(e) => handleInputChange("description_en", e.target.value)} />
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold font-montserrat">Category</Label>
+                    <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                      <SelectTrigger className="h-12 border-2 focus:ring-zinc-500"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="food">{t('categories.food')}</SelectItem>
+                        <SelectItem value="drink">{t('categories.drink')}</SelectItem>
+                        <SelectItem value="room">{t('categories.room')}</SelectItem>
+                      </SelectContent>
+                    </Select>
                 </div>
-                 {/* Amharic Fields */}
-                <div className="space-y-2">
-                    <Label>Amharic</Label>
-                    <Input placeholder="የአገልግሎት ስም (AM)" value={formData.name_am} onChange={(e) => handleInputChange("name_am", e.target.value)} />
-                    <Textarea placeholder="መግለጫ (AM)" value={formData.description_am} onChange={(e) => handleInputChange("description_am", e.target.value)} />
+
+                <hr className="opacity-50" />
+
+                 {/* Content Section */}
+                 <div className="space-y-4 p-4 bg-muted/30 rounded-xl border">
+                    <div className="space-y-2">
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Service Information</Label>
+                        <Input placeholder="Service Name (e.g. Traditional Doro Wat)" value={formData.name_en} onChange={(e) => handleInputChange("name_en", e.target.value)} required className="h-12 text-base" />
+                        <Textarea placeholder="Describe your service in detail..." value={formData.description_en} onChange={(e) => handleInputChange("description_en", e.target.value)} className="min-h-[100px] resize-none" />
+                    </div>
                 </div>
-                {/* Oromo Fields */}
-                <div className="space-y-2">
-                    <Label>Afaan Oromoo</Label>
-                    <Input placeholder="Maqaa Tajaajilaa (OM)" value={formData.name_om} onChange={(e) => handleInputChange("name_om", e.target.value)} />
-                    <Textarea placeholder="Ibsa (OM)" value={formData.description_om} onChange={(e) => handleInputChange("description_om", e.target.value)} />
+
+                {/* Pricing & Image */}
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('admin.form_price')}</Label>
+                     <div className="relative">
+                        <Input type="number" placeholder="0.00" value={formData.price} onChange={(e) => handleInputChange("price", e.target.value)} required className="h-12 pl-4" />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">ETB</span>
+                     </div>
+                   </div>
+                   <div className="space-y-2">
+                     <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{t('admin.form_image')}</Label>
+                     <Input type="file" accept="image/*" onChange={handleFileChange} className="h-12 pt-3 text-[10px]" />
+                   </div>
+                 </div>
+
+                 {/* Room Specialization Section */}
+                 {formData.type === 'room' && (
+                  <div className="space-y-4 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2">
+                    <h3 className="text-sm font-bold text-foreground uppercase tracking-tight font-montserrat">Room Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Number of Beds</Label>
+                        <Input type="number" value={formData.beds} onChange={(e) => handleInputChange("beds", e.target.value)} className="bg-background" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Max Guests</Label>
+                        <Input type="number" value={formData.max_guests} onChange={(e) => handleInputChange("max_guests", e.target.value)} className="bg-background" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground text-[10px] uppercase font-bold">Quick-Add Features</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {['WiFi', 'King Bed', 'Mini Bar', 'AC', 'Smart TV', 'Balcony', 'Sea View', 'Single Bed', 'Desk'].map(feature => (
+                          <button
+                            key={feature}
+                            type="button"
+                            onClick={() => {
+                              if (!ingredients.includes(feature)) {
+                                if (ingredients.length === 1 && ingredients[0] === "") {
+                                  setIngredients([feature]);
+                                } else {
+                                  setIngredients([...ingredients, feature]);
+                                }
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-background border border-border rounded-lg text-[10px] font-bold text-foreground hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-all shadow-sm"
+                          >
+                            + {feature}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                 {/* Macros - ONLY for food */}
+                 {formData.type === 'food' && (
+                   <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border animate-in fade-in zoom-in-95">
+                       <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest italic">Nutrition Facts (Optional)</Label>
+                       <div className="grid grid-cols-2 gap-3">
+                           <div className="space-y-1">
+                               <span className="text-[9px] uppercase font-bold opacity-50 px-1">Calories</span>
+                               <Input type="number" placeholder="Kcal" value={formData.macro_kcal} onChange={(e) => handleInputChange("macro_kcal", e.target.value)} />
+                           </div>
+                           <div className="space-y-1">
+                               <span className="text-[9px] uppercase font-bold opacity-50 px-1">Protein</span>
+                               <Input type="number" placeholder="Grams" value={formData.macro_protein} onChange={(e) => handleInputChange("macro_protein", e.target.value)} />
+                           </div>
+                           <div className="space-y-1">
+                               <span className="text-[9px] uppercase font-bold opacity-50 px-1">Fat</span>
+                               <Input type="number" placeholder="Grams" value={formData.macro_fat} onChange={(e) => handleInputChange("macro_fat", e.target.value)} />
+                           </div>
+                           <div className="space-y-1">
+                               <span className="text-[9px] uppercase font-bold opacity-50 px-1">Carbs</span>
+                               <Input type="number" placeholder="Grams" value={formData.macro_carbs} onChange={(e) => handleInputChange("macro_carbs", e.target.value)} />
+                           </div>
+                       </div>
+                   </div>
+                 )}
+
+                 {/* Ingredients - Hide for drinks */}
+                 {formData.type !== 'drink' && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{formData.type === 'room' ? 'Room Features' : 'Ingredients'}</Label>
+                    {ingredients.map((ing, idx) => (
+                        <div key={idx} className="flex gap-2 mb-2">
+                            <Input 
+                                placeholder={formData.type === 'room' ? "e.g. High-speed WiFi" : "e.g. Chicken breast"} 
+                                value={ing} 
+                                onChange={(e) => handleIngredientChange(idx, e.target.value)} 
+                            />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeIngredientField(idx)} disabled={ingredients.length <= 1}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={addIngredientField} className="w-full h-10 border-dashed">
+                        <Plus className="h-3 w-3 mr-1" /> Add {formData.type === 'room' ? 'Feature' : 'Ingredient'}
+                    </Button>
+                </div>
+                )}
+
+                 {/* Auto-Translation Activated Badge */}
+                <div className="flex items-center gap-2 py-2 px-4 bg-muted/30 text-muted-foreground/60 rounded-full justify-center w-fit mx-auto border border-border/40 mb-2">
+                    <div className="w-1.5 h-1.5 bg-green-500/30 rounded-full" />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.1em]">Global Auto-Translation Active</span>
                 </div>
                 
-                <hr/>
-
-                <Input type="number" placeholder={t('admin.form_price')} value={formData.price} onChange={(e) => handleInputChange("price", e.target.value)} required />
-                <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="food">{t('categories.food')}</SelectItem>
-                    <SelectItem value="drink">{t('categories.drink')}</SelectItem>
-                    <SelectItem value="room">{t('categories.room')}</SelectItem>
-                    <SelectItem value="spa">Spa</SelectItem>
-                    <SelectItem value="transport">Transport</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div>
-                  <Label>{t('admin.form_image')}</Label>
-                  {editingService?.image_url && !imageFile && <img src={`http://localhost:8000/${editingService.image_url}`} alt="Current" className="w-24 h-24 object-cover rounded-md my-2"/>}
-                  <Input type="file" accept="image/*" onChange={handleFileChange} />
-                </div>
                 <DialogFooter>
-                    <Button type="submit">{editingService ? t('admin.form_save_button') : t('admin.add_service')}</Button>
+                    <Button type="submit" className="w-full h-12 text-base font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-white active:scale-[0.98] transition-all">
+                      {editingService ? t('admin.form_save_button') : t('admin.add_service')}
+                    </Button>
                 </DialogFooter>
             </form>
         </DialogContent>
@@ -351,6 +594,119 @@ const AdminPanel = () => {
     </div>
   );
 
+  const renderOrdersTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-foreground">Room Orders</h2>
+        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+          <Clock className="w-3 h-3 mr-1" />
+          {orders.filter(o => o.status === 'pending').length} Pending
+        </Badge>
+      </div>
+
+      {roomLoading && <p>{t('messages.loading')}</p>}
+      {!roomLoading && orders.length === 0 && (
+        <div className="bg-card p-12 rounded-2xl border text-center">
+          <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-semibold text-foreground mb-1">No orders yet</h3>
+          <p className="text-sm text-muted-foreground">New room orders will appear here.</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {orders.map((order) => (
+          <Card key={order.id} className={order.status === 'pending' ? 'border-primary/30 bg-primary/5' : ''}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CardTitle className="text-lg">Room {order.room_number}</CardTitle>
+                    <Badge variant={order.status === 'completed' ? 'default' : order.status === 'pending' ? 'secondary' : 'outline'} className="text-[10px] h-5">
+                      {order.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-primary">{formatPrice(order.total_price)}</p>
+                  <p className="text-[10px] text-muted-foreground">{order.items.length} items</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="space-y-2 mt-2">
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs py-1 border-b border-dashed last:border-0 border-border/50">
+                    <span>{item.quantity}x {item.name_en}</span>
+                    <span className="text-muted-foreground">{(item.price * item.quantity).toLocaleString()} ETB</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+            {order.status === 'pending' && (
+              <div className="px-6 pb-4 flex gap-2">
+                <Button size="sm" className="flex-1 gap-1" onClick={() => updateOrderStatus(order.id, 'completed')}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Mark as Completed
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, 'cancelled')}>
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderCallsTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-foreground">Waiter Calls</h2>
+        <Badge variant="outline" className="bg-zinc-100 dark:bg-zinc-800 text-foreground border-border">
+          <BellRing className="w-3 h-3 mr-1" />
+          {calls.filter(c => c.status === 'pending').length} Active
+        </Badge>
+      </div>
+
+      {roomLoading && <p>{t('messages.loading')}</p>}
+      {!roomLoading && calls.length === 0 && (
+        <div className="bg-card p-12 rounded-2xl border text-center">
+          <BellRing className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-semibold text-foreground mb-1">No active calls</h3>
+          <p className="text-sm text-muted-foreground">Waiter requests will appear here.</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {calls.map((call) => (
+          <Card key={call.id} className={call.status === 'pending' ? 'border-zinc-500/30 bg-zinc-500/5' : ''}>
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${call.status === 'pending' ? 'bg-zinc-500/20 animate-pulse' : 'bg-muted'}`}>
+                    <BellRing className={`h-5 w-5 ${call.status === 'pending' ? 'text-zinc-500' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold">Room {call.room_number}</h4>
+                    <p className="text-xs text-muted-foreground">{new Date(call.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+                {call.status === 'pending' ? (
+                  <Button size="sm" onClick={() => updateCallStatus(call.id, 'completed')}>
+                    Resolve Call
+                  </Button>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] uppercase">Resolved</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
   if (user?.role !== 'admin') {
     return (
         <div className="bg-background flex max-w-[480px] w-full flex-col items-center justify-center mx-auto min-h-screen">
@@ -365,13 +721,13 @@ const AdminPanel = () => {
       <main className="flex flex-col w-full flex-1 px-6 py-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">{t('admin.title')}</h1>
-          <div className="bg-golden/20 text-golden px-3 py-1 rounded-full text-sm font-medium">
+          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-sm font-medium">
             {t('settings.admin_badge')}
           </div>
         </div>
-        <div className="flex bg-muted rounded-lg p-1 mb-6">
+        <div className="flex bg-muted rounded-lg p-1 mb-6 flex-wrap gap-1">
           <button
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
               activeTab === "services"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -381,7 +737,27 @@ const AdminPanel = () => {
             {t('admin.services_tab')}
           </button>
           <button
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
+              activeTab === "orders"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("orders")}
+          >
+            Orders
+          </button>
+          <button
+            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
+              activeTab === "calls"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("calls")}
+          >
+            Calls
+          </button>
+          <button
+            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
               activeTab === "feedback"
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
@@ -391,7 +767,10 @@ const AdminPanel = () => {
             {t('admin.feedback_tab')}
           </button>
         </div>
-        {activeTab === "services" ? renderServicesTab() : renderFeedbackTab()}
+        {activeTab === "services" && renderServicesTab()}
+        {activeTab === "orders" && renderOrdersTab()}
+        {activeTab === "calls" && renderCallsTab()}
+        {activeTab === "feedback" && renderFeedbackTab()}
       </main>
       <BottomNavigation />
     </div>

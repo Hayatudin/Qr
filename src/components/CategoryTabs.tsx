@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRoomMode } from '@/contexts/RoomContext';
 
 interface CategoryTabsProps {
   onCategoryChange?: (category: string) => void;
@@ -11,11 +12,13 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({ onCategoryChange }) 
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const navRef = useRef<HTMLElement>(null);
 
+  const { isRoomMode } = useRoomMode();
+
   const categories = [
     { id: 'all', label: t('categories.all') },
     { id: 'food', label: t('categories.food') },
     { id: 'drink', label: t('categories.drink') },
-    { id: 'room', label: t('categories.room') }
+    ...(!isRoomMode ? [{ id: 'room', label: t('categories.room') }] : [])
   ];
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({ onCategoryChange }) 
           style={{ 
             left: `${indicatorStyle.left}px`, 
             width: `${indicatorStyle.width}px`,
-            backgroundColor: '#daba70', // Match golden font color
+            backgroundColor: 'currentColor', 
           }}
         />
       </nav>

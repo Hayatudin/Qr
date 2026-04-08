@@ -12,7 +12,6 @@ const languages = [
   { code: 'en', name: 'Eng' },
   { code: 'am', name: 'አማ' },
   { code: 'om', name: 'Oro' },
-  { code: 'sid', name: 'Sid' },
 ];
 
 export const HeroSection: React.FC = () => {
@@ -42,11 +41,11 @@ export const HeroSection: React.FC = () => {
           
           <div className="flex items-center gap-2 justify-center flex-[2]">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 16h18l-2.5-7-3.5 4-3-6-3 6-3.5-4L3 16Z" fill="#daba70" />
-              <rect x="3" y="17.5" width="18" height="2" fill="#daba70" />
-              <circle cx="3" cy="8" r="1.5" fill="#daba70" />
-              <circle cx="12" cy="3.5" r="1.5" fill="#daba70" />
-              <circle cx="21" cy="8" r="1.5" fill="#daba70" />
+              <path d="M3 16h18l-2.5-7-3.5 4-3-6-3 6-3.5-4L3 16Z" fill="white" />
+              <rect x="3" y="17.5" width="18" height="2" fill="white" />
+              <circle cx="3" cy="8" r="1.5" fill="white" />
+              <circle cx="12" cy="3.5" r="1.5" fill="white" />
+              <circle cx="21" cy="8" r="1.5" fill="white" />
             </svg>
             <span className="text-white font-medium tracking-wide text-[16px]">Royal Hotel</span>
           </div>
@@ -73,10 +72,7 @@ export const HeroSection: React.FC = () => {
         {/* Tagline */}
         <div className="mt-[70px]">
           <h1
-            className="text-[36px] font-bold leading-[1.1] tracking-tight"
-            style={{ 
-              color: '#daba70', 
-            }}
+            className="text-[36px] font-bold leading-[1.1] tracking-tight text-white drop-shadow-md"
           >
             Your Table,<br />
             <span className="italic">Your Taste</span>

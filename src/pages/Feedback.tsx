@@ -3,7 +3,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, MessageCircle } from 'lucide-react';
+import { Star, MessageCircle, Info, ChevronRight } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -18,10 +18,8 @@ interface ServiceOption {
 
 const Feedback = () => {
   const { t, i18n } = useTranslation();
-  const [services, setServices] = useState<ServiceOption[]>([]);
-  const [isLoadingServices, setIsLoadingServices] = useState(true);
-
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -29,45 +27,29 @@ const Feedback = () => {
   const { user } = useUser();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchServicesForDropdown = async () => {
-      setIsLoadingServices(true);
-      try {
-        const res = await fetch('http://localhost:8000/api/services.php');
-        const data = await res.json();
-        if (data.error) {
-          toast.error("Could not load services for feedback form.");
-        } else {
-          setServices(data);
-        }
-      } catch (err) {
-        toast.error("Failed to fetch services list.");
-      } finally {
-        setIsLoadingServices(false);
-      }
-    };
-    fetchServicesForDropdown();
-  }, []);
-
-  const getTranslatedName = (service: ServiceOption) => {
-    const lang = i18n.language;
-    if (lang === 'am' && service.name_am) return service.name_am;
-    if (lang === 'om' && service.name_om) return service.name_om;
-    return service.name_en;
-  };
+  const feedbackCategories = [
+    { id: 'food_quality', name: 'Food Quality' },
+    { id: 'service_speed', name: 'Service Speed' },
+    { id: 'cleanliness', name: 'Cleanliness & Hygiene' },
+    { id: 'staff_behavior', name: 'Staff Professionalism' },
+    { id: 'value_for_money', name: 'Value for Money' },
+    { id: 'room_comfort', name: 'Room Comfort' },
+    { id: 'amenities', name: 'Facilities & Amenities' },
+    { id: 'overall_experience', name: 'Overall Experience' },
+  ];
 
   const handleSubmit = async () => {
-    if (!selectedServiceId || rating === 0 || !comment.trim()) {
+    if (!selectedCategoryId || rating === 0 || !comment.trim()) {
       toast.error("Please select a category, rating, and write a comment.");
       return;
     }
 
-    const selectedService = services.find(s => String(s.id) === selectedServiceId);
+    const selectedCategory = feedbackCategories.find(c => c.id === selectedCategoryId);
 
     const payload = {
       user_id: user ? user.id : null,
-      service_id: selectedServiceId === 'general' ? null : parseInt(selectedServiceId, 10),
-      category: selectedService ? getTranslatedName(selectedService) : 'General',
+      service_id: null,
+      category: selectedCategory ? selectedCategory.name : 'General',
       comment: comment,
       rating: rating,
     };
@@ -112,19 +94,19 @@ const Feedback = () => {
 
         {/* Form sections */}
         <div className="space-y-5">
-          {/* Service selector */}
+          {/* Category selector */}
           <div className="bg-card rounded-2xl border border-border/50 p-4">
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">{t('feedback.service_label')}</label>
-            <Select value={selectedServiceId ?? ''} onValueChange={setSelectedServiceId} disabled={isLoadingServices}>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Category</label>
+            <Select value={selectedCategoryId ?? ''} onValueChange={setSelectedCategoryId}>
               <SelectTrigger className="rounded-xl border-border bg-background">
-                <SelectValue placeholder={t('feedback.service_placeholder')} />
+                <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="general">{t('feedback.general_feedback')}</SelectItem>
                 <SelectSeparator />
-                {services.map(service => (
-                  <SelectItem key={service.id} value={String(service.id)}>
-                    {getTranslatedName(service)}
+                {feedbackCategories.map(category => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -177,7 +159,7 @@ const Feedback = () => {
           <Button
             onClick={handleSubmit}
             className="w-full h-12 rounded-2xl text-sm font-semibold bg-foreground hover:bg-foreground/90 text-background shadow-lg transition-all duration-200 hover:shadow-xl"
-            disabled={!selectedServiceId || rating === 0 || !comment.trim()}
+            disabled={!selectedCategoryId || rating === 0 || !comment.trim()}
           >
             {t('feedback.submit_button')}
           </Button>

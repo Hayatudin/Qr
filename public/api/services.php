@@ -2,7 +2,7 @@
 require_once 'db.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -17,11 +17,51 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        // The SELECT query now includes all language columns
-        $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, created_at FROM services ORDER BY created_at DESC');
+        $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, created_at FROM services ORDER BY created_at DESC');
         echo json_encode($stmt->fetchAll());
         break;
     
+    case 'PATCH':
+        // Minimal partial update for translations
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ID']);
+            exit;
+        }
+
+        // Only allow updating translation fields for security
+        $allowed_fields = ['name_am', 'name_om', 'description_am', 'description_om'];
+        $update_parts = [];
+        $params = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $allowed_fields)) {
+                $update_parts[] = "$key = ?";
+                $params[] = $value;
+            }
+        }
+
+        if (empty($update_parts)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'No valid fields provided']);
+            exit;
+        }
+
+        $params[] = $id;
+        $sql = "UPDATE services SET " . implode(', ', $update_parts) . " WHERE id = ?";
+        
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            echo json_encode(['success' => true]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        break;
+
     case 'POST':
         if (!is_admin()) {
             http_response_code(403);
@@ -42,6 +82,23 @@ switch ($method) {
         $type = $_POST['type'] ?? '';
         $price = $_POST['price'] ?? '';
         $image_url = '';
+
+        // New fields: ingredients (JSON string) and macros
+        $ingredients = $_POST['ingredients'] ?? null;
+        $macro_kcal = $_POST['macro_kcal'] ?? null;
+        $macro_protein = $_POST['macro_protein'] ?? null;
+        $macro_fat = $_POST['macro_fat'] ?? null;
+        $macro_carbs = $_POST['macro_carbs'] ?? null;
+        $beds = $_POST['beds'] ?? null;
+        $max_guests = $_POST['max_guests'] ?? null;
+
+        // Convert empty strings to null for numeric fields
+        if ($macro_kcal === '') $macro_kcal = null;
+        if ($macro_protein === '') $macro_protein = null;
+        if ($macro_fat === '') $macro_fat = null;
+        if ($macro_carbs === '') $macro_carbs = null;
+        if ($beds === '') $beds = null;
+        if ($max_guests === '') $max_guests = null;
 
         if ($is_update) {
             // ----- UPDATE LOGIC -----
@@ -66,8 +123,8 @@ switch ($method) {
             }
             
             try {
-                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, price=?, image_url=? WHERE id=?');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $id]);
+                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, price=?, image_url=?, ingredients=?, macro_kcal=?, macro_protein=?, macro_fat=?, macro_carbs=?, beds=?, max_guests=? WHERE id=?');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $id]);
                 echo json_encode(['success' => true]);
             } catch (PDOException $e) {
                 http_response_code(500);
@@ -87,9 +144,9 @@ switch ($method) {
             }
 
             try {
-                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, price, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url]);
-                $newServiceId = $pdo->lastInsertId();
+                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests]);
+                $newServiceId = $pdo->lastInsertId('services_id_seq');
                 $selectStmt = $pdo->prepare('SELECT * FROM services WHERE id = ?');
                 $selectStmt->execute([$newServiceId]);
                 $newService = $selectStmt->fetch();
