@@ -15,6 +15,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ) THEN
           ALTER TABLE services ADD COLUMN is_available BOOLEAN DEFAULT TRUE;
         END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'services' AND column_name = 'room_number'
+        ) THEN
+          ALTER TABLE services ADD COLUMN room_number VARCHAR(50);
+        END IF;
       END $$`;
 
     return res.json({ success: true, message: 'Migration completed' });

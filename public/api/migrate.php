@@ -18,4 +18,17 @@ try {
     $results[] = "Error adding is_available: " . $e->getMessage();
 }
 
+// Migration 2: Add room_number column to services
+try {
+    $check = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'room_number'");
+    if ($check->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE services ADD COLUMN room_number VARCHAR(50)");
+        $results[] = "Added room_number column to services";
+    } else {
+        $results[] = "room_number column already exists";
+    }
+} catch (PDOException $e) {
+    $results[] = "Error adding room_number: " . $e->getMessage();
+}
+
 echo json_encode(['success' => true, 'results' => $results]);

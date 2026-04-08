@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { apiUrl, uploadsUrl } from '@/config/api';
 import { Header } from "@/components/Header";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing, Eye, EyeOff } from "lucide-react";
+import QRCode from "react-qr-code";
+import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing, Eye, EyeOff, QrCode } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
 import { useUser, type AdminRole } from "@/contexts/UserContext";
@@ -32,6 +34,7 @@ interface Service {
   macro_carbs: number | null;
   beds: number | null;
   max_guests: number | null;
+  room_number: string | null;
   is_available: boolean;
 }
 
@@ -65,8 +68,8 @@ interface WaiterCall {
 
 // Define which tabs each role can see
 const ROLE_TABS: Record<string, string[]> = {
-  admin: ['services', 'orders', 'calls', 'feedback'],
-  admin_room: ['services'],
+  admin: ['services', 'orders', 'calls', 'feedback', 'qrcodes'],
+  admin_room: ['services', 'qrcodes'],
   admin_food: ['services', 'orders'],
   admin_waiter: ['calls'],
 };
@@ -85,6 +88,7 @@ const TAB_LABELS: Record<string, string> = {
   orders: 'Orders',
   calls: 'Calls',
   feedback: 'admin.feedback_tab',
+  qrcodes: 'QR Codes',
 };
 
 const AdminPanel = () => {
@@ -119,7 +123,7 @@ const AdminPanel = () => {
     name_en: "", description_en: "", 
     price: "", type: defaultType,
     macro_kcal: "", macro_protein: "", macro_fat: "", macro_carbs: "",
-    beds: "1", max_guests: "2"
+    beds: "1", max_guests: "2", room_number: ""
   };
   const [formData, setFormData] = useState(initialFormData);
   const [ingredients, setIngredients] = useState<string[]>([""]);
@@ -144,7 +148,7 @@ const AdminPanel = () => {
     setLoading(true);
     try {
       // Admin fetches with ?admin=1 to see unavailable items too
-      const res = await fetch("http://localhost:8000/api/services.php?admin=1");
+      const res = await fetch(apiUrl("/services.php?admin=1"));
       if (!res.ok) throw new Error("Failed to fetch services data.");
       const data = await res.json();
       if(data.error) throw new Error(data.error);
@@ -159,7 +163,7 @@ const AdminPanel = () => {
     setFeedbackLoading(true);
     setFeedbackError("");
     try {
-      const res = await fetch("http://localhost:8000/api/feedback.php");
+      const res = await fetch(apiUrl("/feedback.php"));
       if (!res.ok) throw new Error("Could not fetch feedback.");
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -174,8 +178,8 @@ const AdminPanel = () => {
     setRoomLoading(true);
     try {
       const [ordersRes, callsRes] = await Promise.all([
-        fetch("http://localhost:8000/api/orders.php"),
-        fetch("http://localhost:8000/api/calls.php")
+        fetch(apiUrl("/orders.php")),
+        fetch(apiUrl("/calls.php"))
       ]);
       
       if (ordersRes.ok) setOrders(await ordersRes.json());
@@ -188,7 +192,7 @@ const AdminPanel = () => {
 
   const updateOrderStatus = async (id: number, status: string) => {
     try {
-      const res = await fetch("http://localhost:8000/api/orders.php", {
+      const res = await fetch(apiUrl("/orders.php"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status })
@@ -204,7 +208,7 @@ const AdminPanel = () => {
 
   const updateCallStatus = async (id: number, status: string) => {
     try {
-      const res = await fetch("http://localhost:8000/api/calls.php", {
+      const res = await fetch(apiUrl("/calls.php"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status })
@@ -222,7 +226,7 @@ const AdminPanel = () => {
   const toggleAvailability = async (service: Service) => {
     const newAvailability = !service.is_available;
     try {
-      const res = await fetch("http://localhost:8000/api/services.php", {
+      const res = await fetch(apiUrl("/services.php"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: service.id, is_available: newAvailability })
@@ -244,6 +248,8 @@ const AdminPanel = () => {
         fetchFeedback();
       } else if (activeTab === 'orders' || activeTab === 'calls') {
         fetchRoomData();
+      } else if (activeTab === 'qrcodes') {
+        fetchServices();
       }
     }
   }, [activeTab, user]);
@@ -299,6 +305,7 @@ const AdminPanel = () => {
       macro_carbs: service.macro_carbs?.toString() || "",
       beds: service.beds?.toString() || "1",
       max_guests: service.max_guests?.toString() || "2",
+      room_number: service.room_number || ""
     });
     
     try {
@@ -353,7 +360,7 @@ const AdminPanel = () => {
       data.append('image', imageFile);
     }
 
-    const endpoint = "http://localhost:8000/api/services.php";
+    const endpoint = apiUrl("/services.php");
     
     if (editingService) {
         data.append('id', String(editingService.id));
@@ -374,7 +381,7 @@ const AdminPanel = () => {
 
   const handleDelete = async (serviceId: number) => {
     try {
-      const response = await fetch("http://localhost:8000/api/services.php", {
+      const response = await fetch(apiUrl("/services.php"), {
         method: "DELETE",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: serviceId }),
@@ -440,7 +447,7 @@ const AdminPanel = () => {
                 <div className="flex items-center gap-4 flex-1">
                   <div className="relative">
                     <img 
-                      src={service.image_url ? `http://localhost:8000/${service.image_url}` : '/placeholder.svg'} 
+                      src={uploadsUrl(service.image_url)} 
                       alt={service.name_en} 
                       className={`w-20 h-20 object-cover rounded-md transition-all ${!service.is_available ? 'grayscale' : ''}`}
                       onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
@@ -558,6 +565,10 @@ const AdminPanel = () => {
                   <div className="space-y-4 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2">
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-tight font-montserrat">Room Information</h3>
                     <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <Label className="text-xs text-muted-foreground">Room Number (For QR Code)</Label>
+                        <Input type="text" placeholder="e.g. 101, 204B" value={formData.room_number || ""} onChange={(e) => handleInputChange("room_number", e.target.value)} className="bg-background" />
+                      </div>
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">Number of Beds</Label>
                         <Input type="number" value={formData.beds} onChange={(e) => handleInputChange("beds", e.target.value)} className="bg-background" />
@@ -815,6 +826,50 @@ const AdminPanel = () => {
     </div>
   );
 
+  const renderQRCodesTab = () => {
+    const roomServices = services.filter(s => s.type === 'room');
+    
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        <h2 className="text-xl font-semibold text-foreground">Room QR Codes</h2>
+        {loading ? (
+           <div>{t('messages.loading')}</div>
+        ) : roomServices.length === 0 ? (
+          <div className="text-center py-10 bg-card rounded-xl border border-dashed">
+            <QrCode className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-20" />
+            <p className="text-muted-foreground">No rooms found. Add some rooms to generate QR codes.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {roomServices.map((room) => {
+              const roomIdentifier = room.room_number || room.name_en;
+              const qrUrl = `https://royalhotelmenu.vercel.app/?mode=room&room=${encodeURIComponent(roomIdentifier)}`;
+              return (
+                <div key={room.id} className="bg-card border p-6 rounded-xl flex flex-col items-center text-center shadow-sm relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="outline" size="sm" className="h-8 shadow-sm" onClick={() => {
+                          navigator.clipboard.writeText(qrUrl);
+                          toast.success("URL copied to clipboard");
+                      }}>Copy URL</Button>
+                  </div>
+                  
+                  <h3 className="font-bold text-lg mb-2">{room.name_en}</h3>
+                  {room.room_number && (
+                      <Badge variant="secondary" className="mb-4">Room {room.room_number}</Badge>
+                  )}
+                  <div className="bg-white p-4 rounded-xl border mb-4 shadow-sm">
+                    <QRCode value={qrUrl} size={150} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground break-all mb-4 px-2">{qrUrl}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isAnyAdmin()) {
     return (
         <div className="bg-background flex max-w-[480px] w-full flex-col items-center justify-center mx-auto min-h-screen">
@@ -847,9 +902,7 @@ const AdminPanel = () => {
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'services' ? t('admin.services_tab') : 
-                 tab === 'feedback' ? t('admin.feedback_tab') :
-                 tab === 'orders' ? 'Orders' : 'Calls'}
+                {TAB_LABELS[tab]}
               </button>
             ))}
           </div>
@@ -859,6 +912,7 @@ const AdminPanel = () => {
         {activeTab === "orders" && renderOrdersTab()}
         {activeTab === "calls" && renderCallsTab()}
         {activeTab === "feedback" && renderFeedbackTab()}
+        {activeTab === "qrcodes" && renderQRCodesTab()}
       </main>
       <BottomNavigation />
     </div>

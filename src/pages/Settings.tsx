@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiUrl } from '@/config/api';
 import { Header } from '@/components/Header';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUser } from '@/contexts/UserContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, setUser } = useUser();
+  const { currency } = useCurrency();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -62,7 +65,7 @@ const Settings = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/users.php?action=login', {
+      const response = await fetch(apiUrl('/users.php?action=login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -88,7 +91,7 @@ const Settings = () => {
         return;
     }
     try {
-        const response = await fetch('http://localhost:8000/api/users.php?action=register', {
+        const response = await fetch(apiUrl('/users.php?action=register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, username, password }),

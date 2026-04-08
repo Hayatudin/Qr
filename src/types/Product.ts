@@ -16,4 +16,7 @@ export interface Product {
   image_url: string;
   type: string;
   isFavoritedInitially: boolean;
+  beds?: number;
+  max_guests?: number;
+  room_number?: string;
 }
