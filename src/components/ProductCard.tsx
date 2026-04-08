@@ -100,45 +100,47 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onFavoriteTog
   return (
     <article
       onClick={() => navigate(`/product/${product.id}`)}
-      className="bg-card cursor-pointer rounded-2xl flex flex-col relative transition-shadow hover:shadow-lg border border-border/50 overflow-hidden"
+      className="bg-card cursor-pointer rounded-2xl flex flex-col relative transition-shadow hover:shadow-lg border border-border/10"
     >
-      {/* Rectangular product image */}
-      <div className={`w-full overflow-hidden relative ${isShorter ? 'h-[130px]' : 'h-[170px]'}`}>
-        <img
-          src={uploadsUrl(product.image_url)}
-          className="w-full h-full object-cover"
-          alt={String(displayName)}
-          onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
-        />
-
-        {/* Add Button - top left */}
-        {isRoomMode && (
-          <button
-            onClick={handleAddClick}
-            className="absolute top-2.5 left-2.5 z-10 bg-primary text-primary-foreground h-7 w-7 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform"
-            aria-label="Add to room order"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Favorite heart button - top right with translucent circle */}
-        <button
-          onClick={handleFavoriteClick}
-          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform hover:scale-110"
-          aria-label={`Toggle ${String(displayName)} as a favorite`}
-        >
-          <Heart
-            className={`w-4 h-4 transition-colors ${isFavorited
-              ? 'fill-red-500 text-red-500'
-              : 'text-white'
-              }`}
+      {/* Rectangular product image with padding */}
+      <div className="w-full p-1 pb-0">
+        <div className={`w-full overflow-hidden relative rounded-xl ${isShorter ? 'h-[130px]' : 'h-[160px]'}`}>
+          <img
+            src={uploadsUrl(product.image_url)}
+            className="w-full h-full object-cover"
+            alt={String(displayName)}
+            onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
           />
-        </button>
+
+          {/* Add Button - top left */}
+          {isRoomMode && (
+            <button
+              onClick={handleAddClick}
+              className="absolute top-2 left-2 z-10 bg-primary text-primary-foreground h-7 w-7 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform"
+              aria-label="Add to room order"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Favorite heart button - top right with translucent circle */}
+          <button
+            onClick={handleFavoriteClick}
+            className="absolute top-2 right-2 z-10 w-7 h-7 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-transform hover:scale-110"
+            aria-label={`Toggle ${String(displayName)} as a favorite`}
+          >
+            <Heart
+              className={`w-3.5 h-3.5 transition-colors ${isFavorited
+                ? 'fill-red-500 text-red-500'
+                : 'text-white'
+                }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Product info */}
-      <div className="px-3 py-3">
+      <div className="px-3 pt-3 pb-4">
         <h3 className="text-sm font-bold text-foreground leading-tight mb-1 line-clamp-1">
           {String(displayName)}
         </h3>

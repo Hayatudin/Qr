@@ -12,12 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import QRCode from "react-qr-code";
-import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing, Eye, EyeOff, QrCode } from "lucide-react";
+import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing, Eye, EyeOff, QrCode, ChevronRight, ChevronLeft, Bell, Utensils } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
 import { useUser, type AdminRole } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CategoryTabs } from "@/components/CategoryTabs";
 
 // Updated Service type
 interface Service {
@@ -101,7 +102,8 @@ const AdminPanel = () => {
   const allowedTabs = ROLE_TABS[userRole] || [];
   const allowedServiceTypes = ROLE_SERVICE_TYPES[userRole] || [];
 
-  const [activeTab, setActiveTab] = useState("");
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [serviceCategory, setServiceCategory] = useState("all");
   
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,11 +131,9 @@ const AdminPanel = () => {
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Set the initial active tab based on role
+  // Remove auto-setting active tab so it defaults to Master Menu
   useEffect(() => {
-    if (allowedTabs.length > 0 && !allowedTabs.includes(activeTab)) {
-      setActiveTab(allowedTabs[0]);
-    }
+    // Menu is default view
   }, [userRole]);
 
   useEffect(() => {
@@ -398,11 +398,17 @@ const AdminPanel = () => {
     }
   };
 
-  // Filter services based on admin role
+  // Filter services based on admin role and category
   const filteredServices = useMemo(() => {
-    if (userRole === 'admin') return services;
-    return services.filter(s => allowedServiceTypes.includes(s.type));
-  }, [services, userRole, allowedServiceTypes]);
+    let list = services;
+    if (userRole !== 'admin') {
+      list = list.filter(s => allowedServiceTypes.includes(s.type));
+    }
+    if (serviceCategory !== 'all') {
+      list = list.filter(s => s.type === serviceCategory);
+    }
+    return list;
+  }, [services, userRole, allowedServiceTypes, serviceCategory]);
 
   const formTitle = useMemo(() => editingService ? t('admin.form_edit_title') : t('admin.form_add_title'), [editingService, t]);
 
@@ -418,21 +424,18 @@ const AdminPanel = () => {
   };
 
   const renderServicesTab = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in zoom-in duration-500">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">
+        <h2 className="text-xl font-bold text-foreground">
           {t('admin.manage_services')}
         </h2>
-        {allowedServiceTypes.length > 0 && (
-          <Button onClick={openAddForm}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('admin.add_service')}
-          </Button>
-        )}
       </div>
 
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">{t('admin.current_services')}</h3>
+      <div className="mt-2">
+        <CategoryTabs onCategoryChange={setServiceCategory} />
+      </div>
+
+      <div className="mt-4 pb-20">
         {loading && <div>{t('messages.loading')}</div>}
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && (
@@ -508,6 +511,16 @@ const AdminPanel = () => {
           </ul>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      {allowedServiceTypes.length > 0 && (
+         <button 
+           onClick={openAddForm}
+           className="fixed bottom-24 right-5 w-14 h-14 bg-foreground text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
+         >
+           <Plus className="h-6 w-6" />
+         </button>
+      )}
       
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
@@ -909,37 +922,81 @@ const AdminPanel = () => {
     <div className="bg-background flex max-w-[480px] w-full flex-col overflow-hidden items-center mx-auto pt-4 min-h-screen">
       <Header />
       <main className="flex flex-col w-full flex-1 px-6 py-6 pb-24">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">{t('admin.title')}</h1>
-          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-[10px] font-medium">
-            {getRoleBadgeLabel()}
+        {/* Master Details Routing */}
+        {!activeTab ? (
+          <div className="animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold text-foreground">{t('admin.title')}</h1>
+              <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-[10px] font-medium">
+                {getRoleBadgeLabel()}
+              </div>
+            </div>
+            
+            <h2 className="text-[10px] font-bold text-muted-foreground mb-2 uppercase tracking-widest px-1 mt-4">Menu</h2>
+            <div className="bg-card rounded-2xl border border-border/50 overflow-hidden mb-5 shadow-sm">
+              {/* Rows */}
+              {allowedTabs.includes('services') && (
+                <button onClick={() => setActiveTab('services')} className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors border-b border-border/40">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                    <Utensils className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-foreground text-left">Manage Services</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+              {allowedTabs.includes('orders') && (
+                <button onClick={() => setActiveTab('orders')} className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors border-b border-border/40">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <ShoppingBag className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-foreground text-left">Orders</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+              {allowedTabs.includes('calls') && (
+                <button onClick={() => setActiveTab('calls')} className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors border-b border-border/40">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <Bell className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-foreground text-left">Calls</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+              {allowedTabs.includes('qrcodes') && (
+                <button onClick={() => setActiveTab('qrcodes')} className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors border-b border-border/40">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                    <QrCode className="h-4 w-4 text-indigo-500" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-foreground text-left">QR Codes</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+              {allowedTabs.includes('feedback') && (
+                <button onClick={() => setActiveTab('feedback')} className="flex items-center gap-4 px-4 py-3.5 w-full hover:bg-accent/50 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-purple-500" />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-foreground text-left">Feedback</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {/* Tabs - only show tabs allowed for the current role */}
-        {allowedTabs.length > 1 && (
-          <div className="flex bg-muted rounded-lg p-1 mb-6 flex-wrap gap-1">
-            {allowedTabs.map(tab => (
-              <button
-                key={tab}
-                className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
-                  activeTab === tab
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {TAB_LABELS[tab]}
-              </button>
-            ))}
+        ) : (
+          <div className="animate-in slide-in-from-right-4 fade-in duration-500">
+            <button 
+              onClick={() => setActiveTab(null)} 
+              className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center mb-6 hover:bg-black/10 dark:hover:bg-white/20 transition-colors border border-border/50"
+            >
+              <ChevronLeft className="w-5 h-5 text-foreground" />
+            </button>
+            {activeTab === "services" && renderServicesTab()}
+            {activeTab === "orders" && renderOrdersTab()}
+            {activeTab === "calls" && renderCallsTab()}
+            {activeTab === "feedback" && renderFeedbackTab()}
+            {activeTab === "qrcodes" && renderQRCodesTab()}
           </div>
         )}
-
-        {activeTab === "services" && renderServicesTab()}
-        {activeTab === "orders" && renderOrdersTab()}
-        {activeTab === "calls" && renderCallsTab()}
-        {activeTab === "feedback" && renderFeedbackTab()}
-        {activeTab === "qrcodes" && renderQRCodesTab()}
       </main>
       <BottomNavigation />
     </div>

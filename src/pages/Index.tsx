@@ -12,11 +12,13 @@ import { RoomBadge } from '@/components/RoomBadge';
 import { FloatingCart } from '@/components/FloatingCart';
 import { FloatingCallWaiter } from '@/components/FloatingCallWaiter';
 
+let globalCachedProducts: Product[] | null = null;
+
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(globalCachedProducts || []);
+  const [isLoading, setIsLoading] = useState(!globalCachedProducts);
   const [error, setError] = useState('');
   
   // Filter state
@@ -25,8 +27,10 @@ const Index = () => {
 
   const { user } = useUser();
 
-  const fetchServicesAndFavorites = useCallback(async () => {
-    setIsLoading(true);
+  const fetchServicesAndFavorites = useCallback(async (forceBackground = false) => {
+    if (!forceBackground && !globalCachedProducts) {
+      setIsLoading(true);
+    }
     setError('');
     try {
       const [servicesRes, favoritesRes] = await Promise.all([
@@ -48,25 +52,30 @@ const Index = () => {
 
       if (servicesData.error) throw new Error(servicesData.error);
 
-      setProducts(servicesData.map((item: any) => ({
+      const mappedProducts = servicesData.map((item: any) => ({
         ...item,
         price: item.price,
         rating: 5,
         reviewCount: "0",
         image: item.image_url || "/placeholder.svg",
         isFavoritedInitially: favoriteIds.has(item.id),
-      })));
+      }));
+
+      globalCachedProducts = mappedProducts;
+      setProducts(mappedProducts);
 
     } catch (e: any) {
-      setError(e.message || "Failed to load services.");
-      setProducts([]);
+      if (!globalCachedProducts) {
+        setError(e.message || "Failed to load services.");
+        setProducts([]);
+      }
     } finally {
       setIsLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchServicesAndFavorites();
+    fetchServicesAndFavorites(!!globalCachedProducts);
   }, [fetchServicesAndFavorites]);
 
   return (

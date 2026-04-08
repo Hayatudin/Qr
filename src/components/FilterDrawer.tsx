@@ -106,57 +106,6 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
             />
           </div>
 
-          {/* User selects Room category */}
-          {isRoom && (
-            <div className="space-y-3.5">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-muted-foreground">Bedrooms</h3>
-              <ToggleGroup 
-                type="single" 
-                value={filters.bedrooms} 
-                onValueChange={(val) => val && setFilters(f => ({ ...f, bedrooms: val }))}
-                className="justify-start gap-2.5"
-              >
-                <ToggleGroupItem value="all" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background">Any</ToggleGroupItem>
-                <ToggleGroupItem value="1" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background">1</ToggleGroupItem>
-                <ToggleGroupItem value="2" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background">2</ToggleGroupItem>
-                <ToggleGroupItem value="3+" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background">3+</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          )}
-
-          {/* Food and Drink category specific */}
-          {!isRoom && (
-            <div className="space-y-3.5">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-muted-foreground">Dietary Preferences</h3>
-              <ToggleGroup 
-                type="multiple" 
-                value={filters.dietary} 
-                onValueChange={(val) => setFilters(f => ({ ...f, dietary: val }))}
-                className="justify-start flex-wrap gap-2.5"
-              >
-                <ToggleGroupItem value="vegan" className="rounded-xl px-5 py-2.5 bg-card border data-[state=on]:bg-[#2d6a4f] data-[state=on]:text-white data-[state=on]:border-[#2d6a4f] transition-all">Vegan</ToggleGroupItem>
-                <ToggleGroupItem value="vegetarian" className="rounded-xl px-5 py-2.5 bg-card border data-[state=on]:bg-[#40916c] data-[state=on]:text-white data-[state=on]:border-[#40916c] transition-all">Vegetarian</ToggleGroupItem>
-                <ToggleGroupItem value="spicy" className="rounded-xl px-5 py-2.5 bg-card border data-[state=on]:bg-destructive data-[state=on]:text-white data-[state=on]:border-destructive transition-all">Spicy</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          )}
-
-          {/* Minimum Rating */}
-          <div className="space-y-3.5">
-            <h3 className="text-xs font-bold tracking-wider uppercase text-muted-foreground">Minimum Rating</h3>
-            <ToggleGroup 
-              type="single" 
-              value={filters.minRating.toString()} 
-              onValueChange={(val) => val && setFilters(f => ({ ...f, minRating: parseInt(val) }))}
-              className="justify-start gap-2.5"
-            >
-              <ToggleGroupItem value="0" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:border-foreground">Any</ToggleGroupItem>
-              <ToggleGroupItem value="3" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:border-foreground">3+ ★</ToggleGroupItem>
-              <ToggleGroupItem value="4" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:border-foreground">4+ ★</ToggleGroupItem>
-              <ToggleGroupItem value="5" className="rounded-xl flex-1 bg-card border data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:border-foreground">5 ★</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-background via-background to-transparent pt-12 pb-8">

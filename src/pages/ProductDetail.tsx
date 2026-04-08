@@ -265,28 +265,23 @@ export const ProductDetail = () => {
         {/* Macros - Only for non-room service */}
         {product.type !== 'room' && (product.macro_kcal || product.macro_protein || product.macro_fat || product.macro_carbs) && (
           <div className="mb-6 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-muted/30 p-3.5 rounded-2xl border border-border/40 backdrop-blur-sm">
-              <div className="flex items-center justify-between gap-2.5">
-                <div className="flex flex-col items-start gap-0.5">
-                  <span className="text-sm font-extrabold text-zinc-900 dark:text-white leading-none">{product.macro_kcal || 0}</span>
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Kcal</span>
+            <div className="bg-[#1A1A1A] p-4 rounded-2xl border border-border/10 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase leading-none tracking-wider">Kcal</span>
+                  <span className="text-sm font-extrabold text-white leading-none">{product.macro_kcal || 0}</span>
                 </div>
-                
-                <div className="w-px h-5 bg-border/50" />
-
-                <div className="flex-1 flex items-center justify-between gap-1">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">P</span>
-                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_protein || 0}g</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">F</span>
-                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_fat || 0}g</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">C</span>
-                    <span className="text-[11px] font-bold text-zinc-900 dark:text-white leading-none">{product.macro_carbs || 0}g</span>
-                  </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase leading-none tracking-wider">P</span>
+                  <span className="text-sm font-extrabold text-white leading-none">{product.macro_protein || 0}g</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase leading-none tracking-wider">F</span>
+                  <span className="text-sm font-extrabold text-white leading-none">{product.macro_fat || 0}g</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase leading-none tracking-wider">C</span>
+                  <span className="text-sm font-extrabold text-white leading-none">{product.macro_carbs || 0}g</span>
                 </div>
               </div>
             </div>
@@ -315,8 +310,8 @@ export const ProductDetail = () => {
           </div>
         )}
 
-        {/* Add-Ons - Only for non-room service */}
-        {product.type !== 'room' && (
+        {/* Add-Ons - Only for non-room and non-drink services */}
+        {product.type !== 'room' && product.type !== 'drink' && (
           <div className="mb-8">
             <h2 className="text-base font-bold text-[#1E2022] dark:text-white mb-3">Add-Ons</h2>
             <div className="space-y-2.5">

@@ -26,8 +26,8 @@ const AboutUs = () => {
       {/* Hero Section */}
       <div className="relative w-full h-[320px] overflow-hidden">
         <img
-          src="/royal_hotel_exterior_1775606231668.png"
-          alt="Royal Hotel Exterior"
+          src="/hotel-lobby.png"
+          alt="Royal Hotel Lobby"
           className="w-full h-full object-cover scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
