@@ -929,9 +929,17 @@ const AdminPanel = () => {
         {/* Master Details Routing */}
         {!activeTab ? (
           <div className="animate-in fade-in zoom-in-95 duration-500">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-foreground">{t('admin.title')}</h1>
-              <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-[10px] font-medium">
+            <div className="flex items-center justify-between mb-6 gap-2">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => navigate('/profile')} 
+                  className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 transition-colors border border-border/50 shrink-0"
+                >
+                  <ChevronLeft className="w-5 h-5 text-foreground" />
+                </button>
+                <h1 className="text-2xl font-bold text-foreground leading-none">{t('admin.title')}</h1>
+              </div>
+              <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-[10px] font-medium whitespace-nowrap">
                 {getRoleBadgeLabel()}
               </div>
             </div>
