@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing } from "lucide-react";
+import { MessageSquare, Plus, Star, Trash2, Edit, X, Clock, ShoppingBag, CheckCircle, BellRing, Eye, EyeOff } from "lucide-react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { toast } from "sonner";
-import { useUser } from "@/contexts/UserContext";
+import { useUser, type AdminRole } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +32,7 @@ interface Service {
   macro_carbs: number | null;
   beds: number | null;
   max_guests: number | null;
+  is_available: boolean;
 }
 
 interface Feedback {
@@ -62,13 +63,41 @@ interface WaiterCall {
   created_at: string;
 }
 
+// Define which tabs each role can see
+const ROLE_TABS: Record<string, string[]> = {
+  admin: ['services', 'orders', 'calls', 'feedback'],
+  admin_room: ['services'],
+  admin_food: ['services', 'orders'],
+  admin_waiter: ['calls'],
+};
+
+// Define which service types each role can manage
+const ROLE_SERVICE_TYPES: Record<string, string[]> = {
+  admin: ['food', 'drink', 'room'],
+  admin_room: ['room'],
+  admin_food: ['food', 'drink'],
+  admin_waiter: [],
+};
+
+// Friendly names for tabs
+const TAB_LABELS: Record<string, string> = {
+  services: 'admin.services_tab',
+  orders: 'Orders',
+  calls: 'Calls',
+  feedback: 'admin.feedback_tab',
+};
+
 const AdminPanel = () => {
-  const { user } = useUser();
+  const { user, isAnyAdmin } = useUser();
   const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState("services");
+  const userRole = user?.role || 'user';
+  const allowedTabs = ROLE_TABS[userRole] || [];
+  const allowedServiceTypes = ROLE_SERVICE_TYPES[userRole] || [];
+
+  const [activeTab, setActiveTab] = useState("");
   
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,9 +114,10 @@ const AdminPanel = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   
+  const defaultType = allowedServiceTypes[0] || 'food';
   const initialFormData = { 
     name_en: "", description_en: "", 
-    price: "", type: "food",
+    price: "", type: defaultType,
     macro_kcal: "", macro_protein: "", macro_fat: "", macro_carbs: "",
     beds: "1", max_guests: "2"
   };
@@ -95,8 +125,15 @@ const AdminPanel = () => {
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
+  // Set the initial active tab based on role
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (allowedTabs.length > 0 && !allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0]);
+    }
+  }, [userRole]);
+
+  useEffect(() => {
+    if (!isAnyAdmin()) {
       toast.error("Access Denied: You are not an administrator.");
       navigate('/');
     }
@@ -106,7 +143,8 @@ const AdminPanel = () => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/services.php");
+      // Admin fetches with ?admin=1 to see unavailable items too
+      const res = await fetch("http://localhost:8000/api/services.php?admin=1");
       if (!res.ok) throw new Error("Failed to fetch services data.");
       const data = await res.json();
       if(data.error) throw new Error(data.error);
@@ -180,8 +218,26 @@ const AdminPanel = () => {
     }
   };
 
+  // Toggle service availability
+  const toggleAvailability = async (service: Service) => {
+    const newAvailability = !service.is_available;
+    try {
+      const res = await fetch("http://localhost:8000/api/services.php", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: service.id, is_available: newAvailability })
+      });
+      if (res.ok) {
+        toast.success(newAvailability ? `"${service.name_en}" is now available` : `"${service.name_en}" is now hidden`);
+        setServices(prev => prev.map(s => s.id === service.id ? { ...s, is_available: newAvailability } : s));
+      }
+    } catch (e) {
+      toast.error("Failed to toggle availability");
+    }
+  };
+
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (isAnyAdmin() && activeTab) {
       if (activeTab === 'services') {
         fetchServices();
       } else if (activeTab === 'feedback') {
@@ -193,10 +249,11 @@ const AdminPanel = () => {
   }, [activeTab, user]);
 
   useEffect(() => {
-    if (user?.role !== 'admin') return;
+    if (!isAnyAdmin()) return;
 
     const unsubscribe = subscribeToNotifications((notification) => {
-      if (notification.type === 'order') {
+      // Only show order notifications to admin and admin_food
+      if (notification.type === 'order' && (userRole === 'admin' || userRole === 'admin_food')) {
         toast.info(`New Order! Room ${notification.roomNumber} - ${notification.totalPrice} ETB`, {
           description: "A new room service order has been placed.",
           action: {
@@ -205,7 +262,8 @@ const AdminPanel = () => {
           }
         });
         if (activeTab === 'orders') fetchRoomData();
-      } else if (notification.type === 'call') {
+      // Only show call notifications to admin and admin_waiter
+      } else if (notification.type === 'call' && (userRole === 'admin' || userRole === 'admin_waiter')) {
         toast.warning(`Waiter Call! Room ${notification.roomNumber}`, {
           description: "A guest is requesting assistance.",
           action: {
@@ -222,7 +280,7 @@ const AdminPanel = () => {
 
   const openAddForm = () => {
     setEditingService(null);
-    setFormData(initialFormData);
+    setFormData({ ...initialFormData, type: allowedServiceTypes[0] || 'food' });
     setIngredients([""]);
     setImageFile(null);
     setIsFormOpen(true);
@@ -333,7 +391,24 @@ const AdminPanel = () => {
     }
   };
 
+  // Filter services based on admin role
+  const filteredServices = useMemo(() => {
+    if (userRole === 'admin') return services;
+    return services.filter(s => allowedServiceTypes.includes(s.type));
+  }, [services, userRole, allowedServiceTypes]);
+
   const formTitle = useMemo(() => editingService ? t('admin.form_edit_title') : t('admin.form_add_title'), [editingService, t]);
+
+  // Role label for the admin badge
+  const getRoleBadgeLabel = () => {
+    switch (userRole) {
+      case 'admin': return 'General Admin';
+      case 'admin_room': return 'Room Manager';
+      case 'admin_food': return 'F&B Manager';
+      case 'admin_waiter': return 'Waiter Manager';
+      default: return 'Admin';
+    }
+  };
 
   const renderServicesTab = () => (
     <div className="space-y-6">
@@ -341,10 +416,12 @@ const AdminPanel = () => {
         <h2 className="text-xl font-semibold text-foreground">
           {t('admin.manage_services')}
         </h2>
-        <Button onClick={openAddForm}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('admin.add_service')}
-        </Button>
+        {allowedServiceTypes.length > 0 && (
+          <Button onClick={openAddForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('admin.add_service')}
+          </Button>
+        )}
       </div>
 
       <div className="mt-8">
@@ -353,22 +430,53 @@ const AdminPanel = () => {
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && (
           <ul className="space-y-3">
-            {services.map((service) => (
-              <li key={service.id} className="bg-card border p-3 rounded-lg flex items-center justify-between gap-4">
+            {filteredServices.map((service) => (
+              <li 
+                key={service.id} 
+                className={`bg-card border p-3 rounded-lg flex items-center justify-between gap-4 transition-all duration-300 ${
+                  !service.is_available ? 'opacity-50 border-dashed' : ''
+                }`}
+              >
                 <div className="flex items-center gap-4 flex-1">
-                  <img 
-                    src={service.image_url ? `http://localhost:8000/${service.image_url}` : '/placeholder.svg'} 
-                    alt={service.name_en} 
-                    className="w-20 h-20 object-cover rounded-md"
-                    onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
-                  />
+                  <div className="relative">
+                    <img 
+                      src={service.image_url ? `http://localhost:8000/${service.image_url}` : '/placeholder.svg'} 
+                      alt={service.name_en} 
+                      className={`w-20 h-20 object-cover rounded-md transition-all ${!service.is_available ? 'grayscale' : ''}`}
+                      onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+                    />
+                    {!service.is_available && (
+                      <div className="absolute inset-0 bg-background/40 rounded-md flex items-center justify-center">
+                        <EyeOff className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1">
                     <p className="font-bold">{service.name_en}</p>
                     <p className="text-sm text-muted-foreground capitalize">{service.type}</p>
                     <p className="text-sm font-bold text-foreground">{formatPrice(Number(service.price))}</p>
+                    {!service.is_available && (
+                      <Badge variant="outline" className="mt-1 text-[9px] border-amber-500/40 text-amber-600 dark:text-amber-400">
+                        HIDDEN
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
+                    {/* Availability Toggle */}
+                    <Button 
+                      variant={service.is_available ? "outline" : "secondary"} 
+                      size="icon" 
+                      onClick={() => toggleAvailability(service)}
+                      title={service.is_available ? "Hide from customers" : "Show to customers"}
+                      className={`transition-all ${service.is_available ? 'hover:bg-green-50 hover:border-green-500 dark:hover:bg-green-950' : 'hover:bg-amber-50 hover:border-amber-500 dark:hover:bg-amber-950'}`}
+                    >
+                      {service.is_available ? (
+                        <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      )}
+                    </Button>
                     <Button variant="outline" size="icon" onClick={() => openEditForm(service)}><Edit className="h-4 w-4" /></Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -406,15 +514,15 @@ const AdminPanel = () => {
                 </div>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                {/* Category Selection - Moved to Top */}
+                {/* Category Selection - Restricted by role */}
                 <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold font-montserrat">Category</Label>
                     <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
                       <SelectTrigger className="h-12 border-2 focus:ring-zinc-500"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="food">{t('categories.food')}</SelectItem>
-                        <SelectItem value="drink">{t('categories.drink')}</SelectItem>
-                        <SelectItem value="room">{t('categories.room')}</SelectItem>
+                        {allowedServiceTypes.includes('food') && <SelectItem value="food">{t('categories.food')}</SelectItem>}
+                        {allowedServiceTypes.includes('drink') && <SelectItem value="drink">{t('categories.drink')}</SelectItem>}
+                        {allowedServiceTypes.includes('room') && <SelectItem value="room">{t('categories.room')}</SelectItem>}
                       </SelectContent>
                     </Select>
                 </div>
@@ -707,7 +815,7 @@ const AdminPanel = () => {
     </div>
   );
 
-  if (user?.role !== 'admin') {
+  if (!isAnyAdmin()) {
     return (
         <div className="bg-background flex max-w-[480px] w-full flex-col items-center justify-center mx-auto min-h-screen">
             <p>{t('messages.loading')}</p>
@@ -721,52 +829,32 @@ const AdminPanel = () => {
       <main className="flex flex-col w-full flex-1 px-6 py-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">{t('admin.title')}</h1>
-          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-sm font-medium">
-            {t('settings.admin_badge')}
+          <div className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 px-3 py-1 rounded-full text-[10px] font-medium">
+            {getRoleBadgeLabel()}
           </div>
         </div>
-        <div className="flex bg-muted rounded-lg p-1 mb-6 flex-wrap gap-1">
-          <button
-            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
-              activeTab === "services"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => setActiveTab("services")}
-          >
-            {t('admin.services_tab')}
-          </button>
-          <button
-            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
-              activeTab === "orders"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => setActiveTab("orders")}
-          >
-            Orders
-          </button>
-          <button
-            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
-              activeTab === "calls"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => setActiveTab("calls")}
-          >
-            Calls
-          </button>
-          <button
-            className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
-              activeTab === "feedback"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={() => setActiveTab("feedback")}
-          >
-            {t('admin.feedback_tab')}
-          </button>
-        </div>
+        
+        {/* Tabs - only show tabs allowed for the current role */}
+        {allowedTabs.length > 1 && (
+          <div className="flex bg-muted rounded-lg p-1 mb-6 flex-wrap gap-1">
+            {allowedTabs.map(tab => (
+              <button
+                key={tab}
+                className={`flex-1 min-w-[80px] py-2 px-2 rounded-md text-[11px] font-medium transition-colors ${
+                  activeTab === tab
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab === 'services' ? t('admin.services_tab') : 
+                 tab === 'feedback' ? t('admin.feedback_tab') :
+                 tab === 'orders' ? 'Orders' : 'Calls'}
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeTab === "services" && renderServicesTab()}
         {activeTab === "orders" && renderOrdersTab()}
         {activeTab === "calls" && renderCallsTab()}

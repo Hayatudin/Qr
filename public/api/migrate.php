@@ -1,24 +1,21 @@
 <?php
 require_once __DIR__ . '/db.php';
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
 
-$cols = $pdo->query('PRAGMA table_info(services)')->fetchAll(PDO::FETCH_ASSOC);
-$colNames = array_column($cols, 'name');
+$results = [];
 
-$newCols = [
-    'ingredients' => 'TEXT',
-    'macro_kcal' => 'REAL',
-    'macro_protein' => 'REAL',
-    'macro_fat' => 'REAL',
-    'macro_carbs' => 'REAL',
-];
-
-foreach ($newCols as $name => $type) {
-    if (!in_array($name, $colNames)) {
-        $pdo->exec("ALTER TABLE services ADD COLUMN $name $type");
-        echo "Added $name column\n";
+// Migration 1: Add is_available column to services
+try {
+    $check = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'services' AND column_name = 'is_available'");
+    if ($check->rowCount() === 0) {
+        $pdo->exec("ALTER TABLE services ADD COLUMN is_available BOOLEAN DEFAULT TRUE");
+        $results[] = "Added is_available column to services";
     } else {
-        echo "$name column already exists\n";
+        $results[] = "is_available column already exists";
     }
+} catch (PDOException $e) {
+    $results[] = "Error adding is_available: " . $e->getMessage();
 }
 
-echo "Migration complete!\n";
+echo json_encode(['success' => true, 'results' => $results]);

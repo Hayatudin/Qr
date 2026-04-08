@@ -1,19 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { ChevronRight, Moon, Globe, DollarSign, Info, Settings as SettingsIcon, LogIn, LogOut } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ChevronRight, Moon, Globe, DollarSign, Info, Settings as SettingsIcon, LogIn, LogOut, Users, Plus, Trash2, ShieldCheck, UtensilsCrossed, DoorOpen, BellRing } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useUser } from '@/contexts/UserContext';
+import { useUser, type AdminRole } from '@/contexts/UserContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { toast } from 'sonner';
 
+interface AdminUser {
+  id: number;
+  email: string;
+  username: string;
+  role: string;
+  created_at: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'General Admin',
+  admin_room: 'Room Manager',
+  admin_food: 'F&B Manager',
+  admin_waiter: 'Waiter Manager',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  admin_room: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+  admin_food: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  admin_waiter: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+};
+
+const ROLE_ICONS: Record<string, React.ReactNode> = {
+  admin: <ShieldCheck className="h-3.5 w-3.5" />,
+  admin_room: <DoorOpen className="h-3.5 w-3.5" />,
+  admin_food: <UtensilsCrossed className="h-3.5 w-3.5" />,
+  admin_waiter: <BellRing className="h-3.5 w-3.5" />,
+};
+
 const Profile = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user, setUser } = useUser();
+  const { user, setUser, isAnyAdmin } = useUser();
   const { currency } = useCurrency();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -24,8 +56,18 @@ const Profile = () => {
   const [password, setPassword] = useState('');
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
 
+  // Admin management state
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [newAdminRole, setNewAdminRole] = useState<string>('admin_room');
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+
   const handleAdminPanelClick = () => {
-    if (user?.role === 'admin') {
+    if (isAnyAdmin()) {
       navigate('/admin');
     } else {
       toast.error("You must be an administrator to access this page.");
@@ -108,6 +150,91 @@ const Profile = () => {
     toast.info("You have been signed out.");
   };
 
+  // ===== Admin Management Functions =====
+  const fetchAdmins = async () => {
+    setAdminsLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/users.php?action=list_admins');
+      if (res.ok) {
+        const data = await res.json();
+        setAdmins(data);
+      }
+    } catch (e) {
+      toast.error("Failed to load admin list");
+    }
+    setAdminsLoading(false);
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminEmail || !newAdminUsername || !newAdminPassword || !newAdminRole) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    setIsAddingAdmin(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/users.php?action=create_admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newAdminEmail,
+          username: newAdminUsername,
+          password: newAdminPassword,
+          role: newAdminRole,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Admin "${newAdminUsername}" created!`);
+        setNewAdminEmail('');
+        setNewAdminUsername('');
+        setNewAdminPassword('');
+        setNewAdminRole('admin_room');
+        fetchAdmins();
+      } else {
+        toast.error(data.error || "Failed to create admin");
+      }
+    } catch (e) {
+      toast.error("Error creating admin");
+    }
+    setIsAddingAdmin(false);
+  };
+
+  const handleDeleteAdmin = async (adminId: number) => {
+    if (adminId === user?.id) {
+      toast.error("You cannot delete yourself!");
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:8000/api/users.php?action=delete_admin', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: adminId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Admin removed");
+        fetchAdmins();
+      } else {
+        toast.error(data.error || "Failed to remove admin");
+      }
+    } catch (e) {
+      toast.error("Error removing admin");
+    }
+  };
+
+  useEffect(() => {
+    if (isAdminDialogOpen && user?.role === 'admin') {
+      fetchAdmins();
+    }
+  }, [isAdminDialogOpen]);
+
+  // Get the admin role label for the user card
+  const getUserRoleLabel = () => {
+    if (!user) return '';
+    return ROLE_LABELS[user.role] || '';
+  };
+
   return (
     <div className="bg-background flex max-w-[480px] w-full flex-col overflow-hidden mx-auto min-h-screen pb-28">
       <main className="flex flex-col w-full flex-1 px-5 pt-14">
@@ -127,9 +254,10 @@ const Profile = () => {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-foreground truncate">{user.username}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                {user.role === 'admin' && (
-                  <span className="mt-1 inline-block bg-golden/20 text-golden px-2 py-0.5 rounded-full text-[10px] font-medium">
-                    Administrator
+                {isAnyAdmin() && (
+                  <span className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${ROLE_COLORS[user.role] || 'bg-golden/20 text-golden'}`}>
+                    {ROLE_ICONS[user.role]}
+                    {getUserRoleLabel()}
                   </span>
                 )}
               </div>
@@ -281,12 +409,14 @@ const Profile = () => {
           </button>
         </div>
 
-        {/* Admin Panel (only for admins) */}
-        {user?.role === 'admin' && (
+        {/* Admin Panel (for any admin role) */}
+        {isAnyAdmin() && (
           <div className="mb-5 scale-in">
             <h2 className="text-[10px] font-bold text-muted-foreground mb-2 uppercase tracking-widest px-1">Administrative</h2>
+            
+            {/* Admin Panel Link */}
             <div 
-              className="group flex items-center justify-between bg-card p-3.5 rounded-2xl border border-golden/20 cursor-pointer hover:bg-golden/5 transition-all active:scale-[0.98] shadow-sm"
+              className="group flex items-center justify-between bg-card p-3.5 rounded-2xl border border-golden/20 cursor-pointer hover:bg-golden/5 transition-all active:scale-[0.98] shadow-sm mb-3"
               onClick={handleAdminPanelClick}
             >
               <div className="flex items-center gap-3">
@@ -300,6 +430,166 @@ const Profile = () => {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-1 transition-transform" />
             </div>
+
+            {/* Manage Admins — Only for General Admin */}
+            {user?.role === 'admin' && (
+              <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+                <DialogTrigger asChild>
+                  <div 
+                    className="group flex items-center justify-between bg-card p-3.5 rounded-2xl border border-blue-500/20 cursor-pointer hover:bg-blue-500/5 transition-all active:scale-[0.98] shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                        <Users className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground">Manage Admins</h3>
+                        <p className="text-[10px] text-muted-foreground">Add or remove admin accounts</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </DialogTrigger>
+
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[480px]">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">Manage Admins</DialogTitle>
+                    <DialogDescription>
+                      Create and manage administrator accounts with different roles.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  {/* Add Admin Form */}
+                  <form onSubmit={handleCreateAdmin} className="space-y-3 p-4 bg-muted/30 rounded-xl border mt-2">
+                    <h3 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Create New Admin</h3>
+                    <Input
+                      placeholder="Username"
+                      value={newAdminUsername}
+                      onChange={(e) => setNewAdminUsername(e.target.value)}
+                      required
+                      className="h-11"
+                    />
+                    <Input
+                      type="email"
+                      placeholder="Email address"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      required
+                      className="h-11"
+                    />
+                    <Input
+                      type="password"
+                      placeholder="Password"
+                      value={newAdminPassword}
+                      onChange={(e) => setNewAdminPassword(e.target.value)}
+                      required
+                      className="h-11"
+                    />
+                    <Select value={newAdminRole} onValueChange={setNewAdminRole}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                            General Admin
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin_room">
+                          <div className="flex items-center gap-2">
+                            <DoorOpen className="h-3.5 w-3.5 text-blue-500" />
+                            Room Manager
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin_food">
+                          <div className="flex items-center gap-2">
+                            <UtensilsCrossed className="h-3.5 w-3.5 text-emerald-500" />
+                            Food & Drinks Manager
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin_waiter">
+                          <div className="flex items-center gap-2">
+                            <BellRing className="h-3.5 w-3.5 text-purple-500" />
+                            Waiter Calls Manager
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      type="submit" 
+                      className="w-full h-11 font-bold" 
+                      disabled={isAddingAdmin}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      {isAddingAdmin ? 'Creating...' : 'Create Admin'}
+                    </Button>
+                  </form>
+
+                  {/* Existing Admins List */}
+                  <div className="space-y-2 mt-4">
+                    <h3 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest px-1">
+                      Current Admins ({admins.length})
+                    </h3>
+                    
+                    {adminsLoading && <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>}
+                    
+                    {!adminsLoading && admins.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No admin accounts found.</p>
+                    )}
+
+                    {admins.map((admin) => (
+                      <div 
+                        key={admin.id} 
+                        className="flex items-center gap-3 p-3 bg-card rounded-xl border transition-all hover:shadow-sm"
+                      >
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                          style={{ background: admin.role === 'admin' ? '#b45309' : admin.role === 'admin_room' ? '#2563eb' : admin.role === 'admin_food' ? '#059669' : '#7c3aed' }}
+                        >
+                          {admin.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{admin.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{admin.email}</p>
+                          <Badge 
+                            variant="outline" 
+                            className={`mt-1 text-[9px] h-5 ${ROLE_COLORS[admin.role] || ''}`}
+                          >
+                            {ROLE_ICONS[admin.role]}
+                            <span className="ml-1">{ROLE_LABELS[admin.role] || admin.role}</span>
+                          </Badge>
+                        </div>
+                        {admin.id !== user?.id && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remove Admin</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to remove "{admin.username}" as an admin? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteAdmin(admin.id)}>Remove</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                        {admin.id === user?.id && (
+                          <Badge variant="outline" className="text-[9px] shrink-0">YOU</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
       </main>

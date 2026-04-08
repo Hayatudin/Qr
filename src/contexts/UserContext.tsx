@@ -1,16 +1,19 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+export type AdminRole = 'admin' | 'admin_room' | 'admin_food' | 'admin_waiter';
+export type UserRole = 'user' | AdminRole;
+
 interface User {
   id: number;
   email: string;
   username: string;
-  role: 'user' | 'admin'; // Add role to user type
+  role: UserRole;
 }
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  // You can add login/logout functions here later
+  isAnyAdmin: () => boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -31,8 +34,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const isAnyAdmin = () => {
+    return ['admin', 'admin_room', 'admin_food', 'admin_waiter'].includes(user?.role || '');
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser: handleSetUser }}>
+    <UserContext.Provider value={{ user, setUser: handleSetUser, isAnyAdmin }}>
       {children}
     </UserContext.Provider>
   );

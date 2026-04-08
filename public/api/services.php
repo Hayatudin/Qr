@@ -17,12 +17,29 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, created_at FROM services ORDER BY created_at DESC');
-        echo json_encode($stmt->fetchAll());
+        $isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
+        
+        if ($isAdmin) {
+            // Admin view: return ALL services including unavailable, with is_available field
+            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, is_available, created_at FROM services ORDER BY created_at DESC');
+        } else {
+            // User view: only return available services
+            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, created_at FROM services WHERE is_available = TRUE ORDER BY created_at DESC');
+        }
+        
+        $results = $stmt->fetchAll();
+        
+        // Cast is_available to boolean for admin responses
+        if ($isAdmin) {
+            foreach ($results as &$row) {
+                $row['is_available'] = (bool)$row['is_available'];
+            }
+        }
+        
+        echo json_encode($results);
         break;
     
     case 'PATCH':
-        // Minimal partial update for translations
         $data = json_decode(file_get_contents('php://input'), true);
         $id = $data['id'] ?? null;
         if (!$id) {
@@ -31,15 +48,20 @@ switch ($method) {
             exit;
         }
 
-        // Only allow updating translation fields for security
-        $allowed_fields = ['name_am', 'name_om', 'description_am', 'description_om'];
+        // Allow updating translation fields AND is_available toggle
+        $allowed_fields = ['name_am', 'name_om', 'description_am', 'description_om', 'is_available'];
         $update_parts = [];
         $params = [];
 
         foreach ($data as $key => $value) {
             if (in_array($key, $allowed_fields)) {
                 $update_parts[] = "$key = ?";
-                $params[] = $value;
+                // Cast is_available to proper boolean for postgres
+                if ($key === 'is_available') {
+                    $params[] = $value ? 't' : 'f';
+                } else {
+                    $params[] = $value;
+                }
             }
         }
 

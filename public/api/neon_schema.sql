@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS services (
     macro_carbs NUMERIC(10,2),
     beds INTEGER DEFAULT 1,
     max_guests INTEGER DEFAULT 2,
+    is_available BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -80,6 +81,17 @@ CREATE TABLE IF NOT EXISTS waiter_calls (
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: Add is_available column if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'services' AND column_name = 'is_available'
+    ) THEN
+        ALTER TABLE services ADD COLUMN is_available BOOLEAN DEFAULT TRUE;
+    END IF;
+END $$;
 
 -- Seed a default admin user (password: admin123)
 -- The hash below is bcrypt for 'admin123'
