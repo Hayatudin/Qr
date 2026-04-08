@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiUrl } from '@/config/api';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { notifyAdmin } from '@/lib/firebase';
@@ -83,7 +84,7 @@ export const RoomProvider = ({ children }: { children: ReactNode }) => {
     if (!roomNumber || cart.length === 0) return;
 
     try {
-      const response = await fetch('http://localhost:8000/api/orders.php', {
+      const response = await fetch(apiUrl('/orders.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +117,7 @@ export const RoomProvider = ({ children }: { children: ReactNode }) => {
     if (!roomNumber) return;
 
     try {
-      const response = await fetch('http://localhost:8000/api/calls.php', {
+      const response = await fetch(apiUrl('/calls.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomNumber }),

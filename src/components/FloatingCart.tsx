@@ -1,4 +1,5 @@
 import React from 'react';
+import { uploadsUrl } from '@/config/api';
 import { useRoomMode } from '@/contexts/RoomContext';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Plus, Minus, X, CreditCard } from 'lucide-react';
@@ -41,7 +42,7 @@ export const FloatingCart = () => {
               {cart.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
                   <div className="h-16 w-16 rounded-xl bg-muted overflow-hidden flex-shrink-0 border">
-                    <img src={item.image_url ? `http://localhost:8000/${item.image_url}` : "/placeholder.svg"} alt={item.name_en} className="h-full w-full object-cover" />
+                    <img src={uploadsUrl(item.image_url)} alt={item.name_en} className="h-full w-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-sm truncate">{item.name_en}</h4>

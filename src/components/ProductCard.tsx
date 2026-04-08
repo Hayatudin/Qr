@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl, uploadsUrl } from '@/config/api';
 import { useUser } from '@/contexts/UserContext';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -59,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onFavoriteTog
       return;
     }
 
-    const endpoint = 'http://localhost:8000/api/favorites.php';
+    const endpoint = apiUrl('/favorites.php');
     const payload = { user_id: user.id, service_id: product.id };
     const method = isFavorited ? 'DELETE' : 'POST';
 
@@ -104,7 +105,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onFavoriteTog
       {/* Rectangular product image */}
       <div className={`w-full overflow-hidden relative ${isShorter ? 'h-[130px]' : 'h-[170px]'}`}>
         <img
-          src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8000/${product.image_url}`}
+          src={uploadsUrl(product.image_url)}
           className="w-full h-full object-cover"
           alt={String(displayName)}
           onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}

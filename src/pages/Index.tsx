@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from '@/config/api';
 import { HeroSection } from '@/components/HeroSection';
 import { SearchBar } from '@/components/SearchBar';
 import { CategoryTabs } from '@/components/CategoryTabs';
@@ -29,8 +30,8 @@ const Index = () => {
     setError('');
     try {
       const [servicesRes, favoritesRes] = await Promise.all([
-        fetch("http://localhost:8000/api/services.php"),
-        user ? fetch(`http://localhost:8000/api/favorites.php?user_id=${user.id}`) : Promise.resolve(null)
+        fetch(apiUrl('/services.php')),
+        user ? fetch(apiUrl(`/favorites.php?user_id=${user.id}`)) : Promise.resolve(null)
       ]);
 
       if (!servicesRes.ok) throw new Error('Failed to fetch services');

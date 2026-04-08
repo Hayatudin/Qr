@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '@/config/api';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
@@ -55,7 +56,7 @@ const Feedback = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8000/api/feedback.php', {
+      const response = await fetch(apiUrl('/feedback.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

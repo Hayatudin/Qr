@@ -3,7 +3,7 @@
  * Fetches translations from Google Translate and persists them to the backend.
  */
 
-const BASE_URL = "http://localhost:8000/api/services.php";
+import { apiUrl } from "@/config/api";
 
 export const translateText = async (text: string, targetLang: string): Promise<string> => {
   if (!text || targetLang === 'en') return text;
@@ -34,7 +34,7 @@ export const translateText = async (text: string, targetLang: string): Promise<s
 
 export const saveTranslation = async (id: number, field: string, translatedText: string) => {
   try {
-    const response = await fetch(BASE_URL, {
+    const response = await fetch(apiUrl('/services.php'), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

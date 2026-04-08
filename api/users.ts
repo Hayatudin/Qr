@@ -1,0 +1,92 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { neon } from '@neondatabase/serverless';
+import bcrypt from 'bcryptjs';
+
+const corsHeaders: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function setCors(res: VercelResponse) {
+  Object.entries(corsHeaders).forEach(([k, v]) => res.setHeader(k, v));
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
+  const sql = neon(process.env.DATABASE_URL!);
+  const action = req.query.action as string;
+
+  try {
+    // LOGIN
+    if (action === 'login') {
+      const { email, password } = req.body;
+      if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+
+      const users = await sql`SELECT * FROM users WHERE email = ${email}`;
+      const user = users[0];
+      if (user && await bcrypt.compare(password, user.password)) {
+        const { password: _, ...safeUser } = user;
+        return res.json({ success: true, user: safeUser });
+      }
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // REGISTER
+    if (action === 'register') {
+      const { email, username, password } = req.body;
+      if (!email || !username || !password) return res.status(400).json({ error: 'Missing required fields' });
+
+      const hash = await bcrypt.hash(password, 10);
+      try {
+        const result = await sql`INSERT INTO users (email, username, password, role) VALUES (${email}, ${username}, ${hash}, 'user') RETURNING id, email, username, role`;
+        return res.json({ success: true, user: result[0] });
+      } catch (e: any) {
+        if (e.message?.includes('unique') || e.message?.includes('duplicate')) {
+          return res.status(409).json({ error: 'Email or username already exists.' });
+        }
+        throw e;
+      }
+    }
+
+    // LIST ADMINS
+    if (action === 'list_admins') {
+      const rows = await sql`SELECT id, email, username, role, created_at FROM users WHERE role IN ('admin', 'admin_room', 'admin_food', 'admin_waiter') ORDER BY created_at DESC`;
+      return res.json(rows);
+    }
+
+    // CREATE ADMIN
+    if (action === 'create_admin') {
+      const { email, username, password, role } = req.body;
+      if (!email || !username || !password || !role) return res.status(400).json({ error: 'Missing required fields' });
+
+      const validRoles = ['admin', 'admin_room', 'admin_food', 'admin_waiter'];
+      if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid admin role' });
+
+      const hash = await bcrypt.hash(password, 10);
+      try {
+        const result = await sql`INSERT INTO users (email, username, password, role) VALUES (${email}, ${username}, ${hash}, ${role}) RETURNING id, email, username, role`;
+        return res.json({ success: true, admin: result[0] });
+      } catch (e: any) {
+        if (e.message?.includes('unique') || e.message?.includes('duplicate')) {
+          return res.status(409).json({ error: 'Email or username already exists.' });
+        }
+        throw e;
+      }
+    }
+
+    // DELETE ADMIN
+    if (action === 'delete_admin') {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: 'Missing admin ID' });
+      await sql`DELETE FROM users WHERE id = ${id}`;
+      return res.json({ success: true });
+    }
+
+    return res.status(400).json({ error: 'Invalid action' });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+}

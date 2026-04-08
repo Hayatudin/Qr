@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from '@/config/api';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { ProductCard } from '@/components/ProductCard';
 import { useUser } from '@/contexts/UserContext';
@@ -21,7 +22,7 @@ const Favorites = () => {
     setIsLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:8000/api/favorites.php?user_id=${user.id}`);
+      const res = await fetch(apiUrl(`/favorites.php?user_id=${user.id}`));
       if (!res.ok) throw new Error('Failed to fetch favorites');
 
       const data = await res.json();

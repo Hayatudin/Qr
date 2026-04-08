@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl, uploadsUrl } from '@/config/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/contexts/UserContext';
@@ -48,8 +49,8 @@ export const ProductDetail = () => {
       setIsLoading(true);
       try {
         const [servicesRes, favoritesRes] = await Promise.all([
-          fetch("http://localhost:8000/api/services.php"),
-          user ? fetch(`http://localhost:8000/api/favorites.php?user_id=${user.id}`) : Promise.resolve(null)
+          fetch(apiUrl('/services.php')),
+          user ? fetch(apiUrl(`/favorites.php?user_id=${user.id}`)) : Promise.resolve(null)
         ]);
 
         if (!servicesRes.ok) throw new Error('Failed to fetch services');
@@ -87,7 +88,7 @@ export const ProductDetail = () => {
       toast.error("You must be logged in to manage favorites.");
       return;
     }
-    const endpoint = 'http://localhost:8000/api/favorites.php';
+    const endpoint = apiUrl('/favorites.php');
     const payload = { user_id: user.id, service_id: product.id };
     const method = isFavorited ? 'DELETE' : 'POST';
 
@@ -171,7 +172,7 @@ export const ProductDetail = () => {
   }
 
   const imageUrl = product.image_url
-    ? (product.image_url.startsWith('http') ? product.image_url : `http://localhost:8000/${product.image_url}`)
+    ? (product.image_url.startsWith('http') ? product.image_url : uploadsUrl(product.image_url))
     : '/placeholder.svg';
 
   const addOns = [

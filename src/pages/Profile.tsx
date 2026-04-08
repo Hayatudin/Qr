@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '@/config/api';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,7 +104,7 @@ const Profile = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost:8000/api/users.php?action=login', {
+      const response = await fetch(apiUrl('/users.php?action=login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -127,7 +128,7 @@ const Profile = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost:8000/api/users.php?action=register', {
+      const response = await fetch(apiUrl('/users.php?action=register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password }),
@@ -154,7 +155,7 @@ const Profile = () => {
   const fetchAdmins = async () => {
     setAdminsLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/users.php?action=list_admins');
+      const res = await fetch(apiUrl('/users.php?action=list_admins'));
       if (res.ok) {
         const data = await res.json();
         setAdmins(data);
@@ -173,7 +174,7 @@ const Profile = () => {
     }
     setIsAddingAdmin(true);
     try {
-      const res = await fetch('http://localhost:8000/api/users.php?action=create_admin', {
+      const res = await fetch(apiUrl('/users.php?action=create_admin'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +207,7 @@ const Profile = () => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:8000/api/users.php?action=delete_admin', {
+      const res = await fetch(apiUrl('/users.php?action=delete_admin'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: adminId }),
