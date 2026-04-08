@@ -113,6 +113,7 @@ switch ($method) {
         $macro_carbs = $_POST['macro_carbs'] ?? null;
         $beds = $_POST['beds'] ?? null;
         $max_guests = $_POST['max_guests'] ?? null;
+        $room_number = $_POST['room_number'] ?? null;
 
         // Convert empty strings to null for numeric fields
         if ($macro_kcal === '') $macro_kcal = null;
@@ -145,8 +146,8 @@ switch ($method) {
             }
             
             try {
-                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, price=?, image_url=?, ingredients=?, macro_kcal=?, macro_protein=?, macro_fat=?, macro_carbs=?, beds=?, max_guests=? WHERE id=?');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $id]);
+                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, price=?, image_url=?, ingredients=?, macro_kcal=?, macro_protein=?, macro_fat=?, macro_carbs=?, beds=?, max_guests=?, room_number=? WHERE id=?');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number, $id]);
                 echo json_encode(['success' => true]);
             } catch (PDOException $e) {
                 http_response_code(500);
@@ -166,8 +167,8 @@ switch ($method) {
             }
 
             try {
-                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests]);
+                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, room_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number]);
                 $newServiceId = $pdo->lastInsertId('services_id_seq');
                 $selectStmt = $pdo->prepare('SELECT * FROM services WHERE id = ?');
                 $selectStmt->execute([$newServiceId]);

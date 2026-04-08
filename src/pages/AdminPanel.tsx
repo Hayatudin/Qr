@@ -826,6 +826,30 @@ const AdminPanel = () => {
     </div>
   );
 
+  const downloadQR = (roomIdentifier: string) => {
+    const svg = document.getElementById(`qr-svg-${roomIdentifier}`);
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = 1024;
+      canvas.height = 1024;
+      if (ctx) {
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const pngFile = canvas.toDataURL("image/png");
+          const downloadLink = document.createElement("a");
+          downloadLink.download = `Room_${roomIdentifier}_QR.png`;
+          downloadLink.href = pngFile;
+          downloadLink.click();
+      }
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
   const renderQRCodesTab = () => {
     const roomServices = services.filter(s => s.type === 'room');
     
@@ -858,9 +882,12 @@ const AdminPanel = () => {
                       <Badge variant="secondary" className="mb-4">Room {room.room_number}</Badge>
                   )}
                   <div className="bg-white p-4 rounded-xl border mb-4 shadow-sm">
-                    <QRCode value={qrUrl} size={150} />
+                    <QRCode id={`qr-svg-${roomIdentifier}`} value={qrUrl} size={150} />
                   </div>
                   <p className="text-[10px] text-muted-foreground break-all mb-4 px-2">{qrUrl}</p>
+                  <Button variant="default" className="w-full font-bold" onClick={() => downloadQR(roomIdentifier)}>
+                    Download High Quality QR
+                  </Button>
                 </div>
               );
             })}
