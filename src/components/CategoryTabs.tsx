@@ -4,22 +4,39 @@ import { useRoomMode } from '@/contexts/RoomContext';
 
 interface CategoryTabsProps {
   onCategoryChange?: (category: string) => void;
+  hideAll?: boolean;
+  allowedCategories?: string[];
 }
 
-export const CategoryTabs: React.FC<CategoryTabsProps> = ({ onCategoryChange }) => {
+export const CategoryTabs: React.FC<CategoryTabsProps> = ({ onCategoryChange, hideAll = false, allowedCategories }) => {
   const { t, i18n } = useTranslation();
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-  const navRef = useRef<HTMLElement>(null);
-
   const { isRoomMode } = useRoomMode();
 
-  const categories = [
+  let categories = [
     { id: 'all', label: t('categories.all') },
     { id: 'food', label: t('categories.food') },
     { id: 'drink', label: t('categories.drink') },
-    ...(!isRoomMode ? [{ id: 'room', label: t('categories.room') }] : [])
+    { id: 'room', label: t('categories.room') }
   ];
+
+  if (hideAll) {
+    categories = categories.filter(c => c.id !== 'all');
+  }
+  
+  // Follow existing room mode logic if not overriden by specific allowed permissions
+  if (isRoomMode && !allowedCategories) {
+    categories = categories.filter(c => c.id !== 'room');
+  }
+
+  if (allowedCategories && allowedCategories.length > 0) {
+    categories = categories.filter(c => c.id === 'all' || allowedCategories.includes(c.id));
+  }
+
+  const defaultCategory = categories[0]?.id || 'all';
+  
+  const [activeCategory, setActiveCategory] = useState(defaultCategory);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     // Need a slight delay to allow font rendering and flex layout to settle length calculation

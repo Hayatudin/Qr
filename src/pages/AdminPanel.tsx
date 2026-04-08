@@ -103,7 +103,7 @@ const AdminPanel = () => {
   const allowedServiceTypes = ROLE_SERVICE_TYPES[userRole] || [];
 
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [serviceCategory, setServiceCategory] = useState("all");
+  const [serviceCategory, setServiceCategory] = useState((userRole === 'admin' ? 'food' : allowedServiceTypes[0]) || 'food');
   
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -432,7 +432,11 @@ const AdminPanel = () => {
       </div>
 
       <div className="mt-2">
-        <CategoryTabs onCategoryChange={setServiceCategory} />
+        <CategoryTabs 
+          onCategoryChange={setServiceCategory} 
+          hideAll={true}
+          allowedCategories={userRole === 'admin' ? ['food', 'drink', 'room'] : allowedServiceTypes}
+        />
       </div>
 
       <div className="mt-4 pb-20">
