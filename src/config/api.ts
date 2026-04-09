@@ -30,6 +30,6 @@ export function apiUrl(path: string): string {
  */
 export function uploadsUrl(path: string): string {
   if (!path) return '/placeholder.svg';
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
   return `${UPLOADS_BASE}/${path}`;
 }
