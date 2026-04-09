@@ -6,11 +6,11 @@
 
 const isDev = import.meta.env.DEV;
 
-// In dev mode, proxy to localhost PHP server. In prod, use relative /api/ paths (Vercel serverless).
-export const API_BASE = isDev ? 'http://localhost:8000/api' : '/api';
+// In dev mode, point to PHP server using the current hostname so network peers (like phones) can connect.
+export const API_BASE = isDev ? `http://${window.location.hostname}:8000/api` : '/api';
 
 // For uploaded images: in dev they're served from PHP server; in prod they won't exist (images are stored as URLs)
-export const UPLOADS_BASE = isDev ? 'http://localhost:8000' : '';
+export const UPLOADS_BASE = isDev ? `http://${window.location.hostname}:8000` : '';
 
 /**
  * Build full API url.
