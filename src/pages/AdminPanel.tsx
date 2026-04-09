@@ -347,26 +347,40 @@ const AdminPanel = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-        data.append(key, value);
-    });
-
+    
+    const payload: Record<string, any> = { ...formData };
+    
     // Send ingredients as JSON string
     const filteredIngs = ingredients.filter(i => i.trim() !== "");
-    data.append('ingredients', JSON.stringify(filteredIngs));
+    payload.ingredients = JSON.stringify(filteredIngs);
     
     if (imageFile) {
-      data.append('image', imageFile);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(imageFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        payload.image_url = base64;
+      } catch (err) {
+        console.error("Failed to read image", err);
+      }
+    } else if (editingService?.image_url) {
+      payload.image_url = editingService.image_url;
     }
 
     const endpoint = apiUrl("/services.php");
     
     if (editingService) {
-        data.append('id', String(editingService.id));
+        payload.id = editingService.id;
     }
 
-    const promise = fetch(endpoint, { method: "POST", body: data });
+    const promise = fetch(endpoint, { 
+      method: "POST", 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload) 
+    });
 
     toast.promise(promise, {
       loading: `${editingService ? 'Updating' : 'Adding'} service...`,
