@@ -15,16 +15,23 @@ function is_admin() {
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Parse JSON body if present and merge into $_POST
+$input_content = file_get_contents('php://input');
+$json_data = json_decode($input_content, true);
+if (is_array($json_data)) {
+    $_POST = array_merge($_POST, $json_data);
+}
+
 switch ($method) {
     case 'GET':
         $isAdmin = isset($_GET['admin']) && $_GET['admin'] == '1';
         
         if ($isAdmin) {
             // Admin view: return ALL services including unavailable, with is_available field
-            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, is_available, created_at FROM services ORDER BY created_at DESC');
+            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, subcategory, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, room_number, is_available, created_at FROM services ORDER BY created_at DESC');
         } else {
             // User view: only return available services
-            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, created_at FROM services WHERE is_available = TRUE ORDER BY created_at DESC');
+            $stmt = $pdo->query('SELECT id, name_en, name_am, name_om, description_en, description_am, description_om, type, subcategory, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, room_number, created_at FROM services WHERE is_available = TRUE ORDER BY created_at DESC');
         }
         
         $results = $stmt->fetchAll();
@@ -102,8 +109,9 @@ switch ($method) {
         $description_om = $_POST['description_om'] ?? '';
         
         $type = $_POST['type'] ?? '';
+        $subcategory = $_POST['subcategory'] ?? null;
         $price = $_POST['price'] ?? '';
-        $image_url = '';
+        $image_url = $_POST['image_url'] ?? '';
 
         // New fields: ingredients (JSON string) and macros
         $ingredients = $_POST['ingredients'] ?? null;
@@ -131,11 +139,11 @@ switch ($method) {
             $stmt = $pdo->prepare('SELECT image_url FROM services WHERE id = ?');
             $stmt->execute([$id]);
             $current_service = $stmt->fetch();
-            $image_url = $current_service['image_url'];
+            $old_image_url = $current_service['image_url'];
 
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                if ($image_url && file_exists("../" . $image_url)) {
-                     unlink("../" . $image_url);
+                if ($old_image_url && file_exists("../" . $old_image_url)) {
+                     unlink("../" . $old_image_url);
                 }
                 $uploadDir = '../uploads/';
                 $fileName = uniqid() . '-' . basename($_FILES['image']['name']);
@@ -143,11 +151,13 @@ switch ($method) {
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
                     $image_url = 'uploads/' . $fileName;
                 }
+            } else if (empty($image_url)) {
+                $image_url = $old_image_url;
             }
             
             try {
-                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, price=?, image_url=?, ingredients=?, macro_kcal=?, macro_protein=?, macro_fat=?, macro_carbs=?, beds=?, max_guests=?, room_number=? WHERE id=?');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number, $id]);
+                $stmt = $pdo->prepare('UPDATE services SET name_en=?, description_en=?, name_am=?, description_am=?, name_om=?, description_om=?, type=?, subcategory=?, price=?, image_url=?, ingredients=?, macro_kcal=?, macro_protein=?, macro_fat=?, macro_carbs=?, beds=?, max_guests=?, room_number=? WHERE id=?');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $subcategory, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number, $id]);
                 echo json_encode(['success' => true]);
             } catch (PDOException $e) {
                 http_response_code(500);
@@ -167,8 +177,8 @@ switch ($method) {
             }
 
             try {
-                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, room_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number]);
+                $stmt = $pdo->prepare('INSERT INTO services (name_en, description_en, name_am, description_am, name_om, description_om, type, subcategory, price, image_url, ingredients, macro_kcal, macro_protein, macro_fat, macro_carbs, beds, max_guests, room_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$name_en, $description_en, $name_am, $description_am, $name_om, $description_om, $type, $subcategory, $price, $image_url, $ingredients, $macro_kcal, $macro_protein, $macro_fat, $macro_carbs, $beds, $max_guests, $room_number]);
                 $newServiceId = $pdo->lastInsertId('services_id_seq');
                 $selectStmt = $pdo->prepare('SELECT * FROM services WHERE id = ?');
                 $selectStmt->execute([$newServiceId]);

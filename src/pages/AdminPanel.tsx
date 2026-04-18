@@ -19,6 +19,7 @@ import { useUser, type AdminRole } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CategoryTabs } from "@/components/CategoryTabs";
+import { foodSubcategories, drinkSubcategories } from "@/constants/categories";
 
 // Updated Service type
 interface Service {
@@ -36,6 +37,7 @@ interface Service {
   beds: number | null;
   max_guests: number | null;
   room_number: string | null;
+  subcategory?: string | null;
   is_available: boolean;
 }
 
@@ -123,7 +125,7 @@ const AdminPanel = () => {
   const defaultType = allowedServiceTypes[0] || 'food';
   const initialFormData = { 
     name_en: "", description_en: "", 
-    price: "", type: defaultType,
+    price: "", type: defaultType, subcategory: "",
     macro_kcal: "", macro_protein: "", macro_fat: "", macro_carbs: "",
     beds: "1", max_guests: "2", room_number: ""
   };
@@ -299,6 +301,7 @@ const AdminPanel = () => {
       description_en: service.description_en,
       price: service.price,
       type: service.type,
+      subcategory: service.subcategory || "",
       macro_kcal: service.macro_kcal?.toString() || "",
       macro_protein: service.macro_protein?.toString() || "",
       macro_fat: service.macro_fat?.toString() || "",
@@ -553,16 +556,37 @@ const AdminPanel = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                 {/* Category Selection - Restricted by role */}
-                <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold font-montserrat">Category</Label>
-                    <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                      <SelectTrigger className="h-12 border-2 focus:ring-zinc-500"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {allowedServiceTypes.includes('food') && <SelectItem value="food">{t('categories.food')}</SelectItem>}
-                        {allowedServiceTypes.includes('drink') && <SelectItem value="drink">{t('categories.drink')}</SelectItem>}
-                        {allowedServiceTypes.includes('room') && <SelectItem value="room">{t('categories.room')}</SelectItem>}
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold font-montserrat">Category</Label>
+                      <Select value={formData.type} onValueChange={(value) => { handleInputChange("type", value); handleInputChange("subcategory", ""); }}>
+                        <SelectTrigger className="h-12 border-2 focus:ring-zinc-500"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {allowedServiceTypes.includes('food') && <SelectItem value="food">{t('categories.food')}</SelectItem>}
+                          {allowedServiceTypes.includes('drink') && <SelectItem value="drink">{t('categories.drink')}</SelectItem>}
+                          {allowedServiceTypes.includes('room') && <SelectItem value="room">{t('categories.room')}</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                  </div>
+                  {(formData.type === 'food' || formData.type === 'drink') && (
+                    <div className="space-y-2 animate-in fade-in zoom-in-95">
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold font-montserrat">Sub Category</Label>
+                      <Select value={formData.subcategory || "Other"} onValueChange={(value) => handleInputChange("subcategory", value)}>
+                        <SelectTrigger className="h-12 border-2 focus:ring-zinc-500">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Other">Other</SelectItem>
+                          {formData.type === 'food' && foodSubcategories.map(sub => (
+                            <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                          ))}
+                          {formData.type === 'drink' && drinkSubcategories.map(sub => (
+                            <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
 
                 <hr className="opacity-50" />

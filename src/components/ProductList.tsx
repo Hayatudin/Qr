@@ -15,6 +15,56 @@ interface ProductListProps {
 }
 
 export { type Product } from "@/types/Product";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { foodSubcategories, drinkSubcategories } from "@/constants/categories";
+
+const SubcategoryGroup = ({ title, products, onFavoriteToggle }: { title: string, products: Product[], onFavoriteToggle: () => void }) => {
+  const [isOpen, setIsOpen] = React.useState(true);
+  
+  if (products.length === 0) return null;
+
+  const leftColumn = products.filter((_, index) => index % 2 === 0);
+  const rightColumn = products.filter((_, index) => index % 2 === 1);
+
+  return (
+    <div className="mb-8 w-full animate-in fade-in slide-in-from-bottom-4">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full pb-2 mb-4 border-b-2 border-foreground/10 group cursor-pointer focus:outline-none"
+      >
+        <h3 className="text-lg font-bold font-montserrat tracking-wide text-foreground group-hover:text-primary transition-colors text-left uppercase">
+          {title}
+        </h3>
+        {isOpen ? <ChevronUp className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" /> : <ChevronDown className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />}
+      </button>
+      
+      <div className={`grid grid-cols-2 gap-3 items-start transition-all duration-300 origin-top overflow-hidden ${isOpen ? 'opacity-100 max-h-[5000px] mt-2' : 'opacity-0 max-h-0'}`}>
+        {/* Left Column */}
+        <div className="flex flex-col gap-3">
+          {leftColumn.map((product, i) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onFavoriteToggle={onFavoriteToggle}
+              index={i * 2}
+            />
+          ))}
+        </div>
+        {/* Right Column, staggered push down */}
+        <div className="flex flex-col gap-3">
+          {rightColumn.map((product, i) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onFavoriteToggle={onFavoriteToggle}
+              index={i * 2 + 1}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const ProductList: React.FC<ProductListProps> = ({
   products,
@@ -89,38 +139,56 @@ export const ProductList: React.FC<ProductListProps> = ({
   if (error)
     return <div className="text-center py-8 text-red-500">{error}</div>;
 
-  const leftColumn = filteredProducts.filter((_, index) => index % 2 === 0);
-  const rightColumn = filteredProducts.filter((_, index) => index % 2 === 1);
+  let subcategoriesToDisplay: string[] = [];
+  if (activeCategory === 'food') subcategoriesToDisplay = [...foodSubcategories, "Other"];
+  else if (activeCategory === 'drink') subcategoriesToDisplay = [...drinkSubcategories, "Other"];
+  else if (activeCategory === 'all') subcategoriesToDisplay = [...foodSubcategories, ...drinkSubcategories, "Other"];
 
   return (
     <section
       className="w-full mt-3"
       aria-label="Product list"
     >
-      <div className="grid grid-cols-2 gap-3 items-start">
-        {/* Left Column */}
-        <div className="flex flex-col gap-3">
-          {leftColumn.map((product, i) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onFavoriteToggle={onFavoriteToggle}
-              index={i * 2}
-            />
-          ))}
+      {['all', 'food', 'drink'].includes(activeCategory) ? (
+        <div className="w-full">
+          {subcategoriesToDisplay.map(subCategoryName => {
+            const groupProducts = filteredProducts.filter(p => (p.subcategory || "Other") === subCategoryName);
+            if (!groupProducts || groupProducts.length === 0) return null;
+            return <SubcategoryGroup key={subCategoryName} title={subCategoryName} products={groupProducts} onFavoriteToggle={onFavoriteToggle} />;
+          })}
+          {/* Output any unaccounted categories just in case */}
+          {Array.from(new Set(filteredProducts.map(p => p.subcategory || 'Other')))
+               .filter(k => !subcategoriesToDisplay.includes(k))
+               .map(subCategoryName => {
+                 const groupProducts = filteredProducts.filter(p => (p.subcategory || "Other") === subCategoryName);
+                 return <SubcategoryGroup key={subCategoryName} title={subCategoryName} products={groupProducts} onFavoriteToggle={onFavoriteToggle} />;
+          })}
         </div>
-        {/* Right Column, staggered push down */}
-        <div className="flex flex-col gap-3">
-          {rightColumn.map((product, i) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onFavoriteToggle={onFavoriteToggle}
-              index={i * 2 + 1}
-            />
-          ))}
+      ) : (
+        <div className="grid grid-cols-2 gap-3 items-start">
+          <div className="flex flex-col gap-3">
+            {filteredProducts.filter((_, index) => index % 2 === 0).map((product, i) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onFavoriteToggle={onFavoriteToggle}
+                index={i * 2}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-3">
+            {filteredProducts.filter((_, index) => index % 2 === 1).map((product, i) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onFavoriteToggle={onFavoriteToggle}
+                index={i * 2 + 1}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      
       {filteredProducts.length === 0 && !isLoading && (
         <div className="text-center py-12 text-muted-foreground">
           <p>{t('messages.no_products')}</p>
