@@ -214,9 +214,18 @@ switch ($method) {
             unlink('../' . $service['image_url']);
         }
 
-        $stmt = $pdo->prepare('DELETE FROM services WHERE id=?');
-        $stmt->execute([$id]);
-        echo json_encode(['success' => true]);
+        try {
+            // Delete related order items first to prevent foreign key constraint violations
+            $stmt = $pdo->prepare('DELETE FROM order_items WHERE service_id=?');
+            $stmt->execute([$id]);
+            
+            $stmt = $pdo->prepare('DELETE FROM services WHERE id=?');
+            $stmt->execute([$id]);
+            echo json_encode(['success' => true]);
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to delete service: ' . $e->getMessage()]);
+        }
         break;
         
     default:

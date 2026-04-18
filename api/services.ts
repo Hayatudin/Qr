@@ -72,6 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'DELETE': {
         const { id: deleteId } = req.body;
         if (!deleteId) return res.status(400).json({ error: 'Missing service ID' });
+        // Delete related order items first to prevent foreign key violations
+        await sql`DELETE FROM order_items WHERE service_id = ${deleteId}`;
         await sql`DELETE FROM services WHERE id = ${deleteId}`;
         return res.json({ success: true });
       }
