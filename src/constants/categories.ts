@@ -14,5 +14,6 @@ export const foodSubcategories = [
 
 export const drinkSubcategories = [
   "Hot Drinks",
-  "Cold Drinks"
+  "Cold Drinks",
+  "Juices"
 ];
